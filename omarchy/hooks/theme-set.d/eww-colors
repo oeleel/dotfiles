@@ -1,0 +1,5 @@
+#!/bin/bash
+# Regenerate eww color variables from the current Omarchy theme and reload eww.
+sed -E 's/@define-color ([A-Za-z-]+) (.*);/\$\1: \2;/' \
+  ~/.config/omarchy/current/theme/walker.css > ~/.config/eww/_colors.scss
+eww reload >/dev/null 2>&1 || true

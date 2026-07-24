@@ -1,0 +1,27 @@
+#!/bin/bash
+# Toggle the analog sink between Headphones (earbuds) and Line Out (speakers).
+# Both devices share one sink on this machine, so we switch ports, not sinks.
+
+SINK="alsa_output.pci-0000_0e_00.6.analog-stereo"
+
+current_port=$(pactl -f json list sinks |
+  jq -r --arg n "$SINK" '.[] | select(.name == $n) | .active_port')
+
+if [[ $current_port == "analog-output-headphones" ]]; then
+  next_port="analog-output-lineout"
+  label="Speakers (Line Out)"
+else
+  next_port="analog-output-headphones"
+  label="Earbuds (Headphones)"
+fi
+
+pactl set-sink-port "$SINK" "$next_port" || exit 1
+
+# Make sure the analog sink is the default, in case HDMI was selected
+pactl set-default-sink "$SINK"
+
+# Unmute the port we just switched to — a stale saved mute state on the
+# target jack would otherwise make the switch appear to do nothing
+pactl set-sink-mute "$SINK" 0
+
+omarchy-swayosd-client --custom-message "$label" --custom-icon "sink-volume-high-symbolic"

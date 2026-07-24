@@ -1,0 +1,47 @@
+#!/bin/bash
+# Toggle the eww audio panel from the Waybar audio icon.
+# --refresh: update the panel's labels/slider without toggling (used by the switch button).
+
+SINK="alsa_output.pci-0000_0e_00.6.analog-stereo"
+
+ensure_daemon() {
+  eww ping >/dev/null 2>&1 && return
+  eww daemon >/dev/null 2>&1 &
+  for _ in $(seq 20); do
+    eww ping >/dev/null 2>&1 && return
+    sleep 0.1
+  done
+}
+
+refresh() {
+  local sink_json port vol
+  sink_json=$(pactl -f json list sinks | jq --arg n "$SINK" '.[] | select(.name == $n)')
+  port=$(jq -r '.active_port' <<< "$sink_json")
+  vol=$(jq -r '.volume | to_entries[0].value.value_percent' <<< "$sink_json" | tr -d '%')
+  if [[ $port == "analog-output-headphones" ]]; then
+    eww update output-label="󰋋  Earbuds" other-label="󰓃  Speakers" volume="$vol"
+  else
+    eww update output-label="󰓃  Speakers" other-label="󰋋  Earbuds" volume="$vol"
+  fi
+}
+
+ensure_daemon
+
+if [[ $1 == "--refresh" ]]; then
+  refresh
+  exit 0
+fi
+
+open=$(eww active-windows 2>/dev/null)
+if grep -q audio-popup <<< "$open"; then
+  bar-dropdown --close-all
+else
+  # exclusive with the other bar dropdowns
+  for w in network-popup bluetooth-popup calendar-popup; do
+    grep -q "$w" <<< "$open" && eww close "$w"
+  done
+  refresh
+  # click-catcher first so the popup stacks above it
+  grep -q closer <<< "$open" || eww open closer
+  eww open audio-popup
+fi

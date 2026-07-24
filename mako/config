@@ -1,0 +1,9 @@
+# Theme colors + Omarchy defaults (tracks theme switches via the current symlink)
+include=~/.config/omarchy/current/theme/mako.ini
+
+# Glass background generated per-theme by the mako-glass hook
+include=~/.config/mako/glass.ini
+
+# Glass-island styling to match the Waybar pills
+border-radius=13
+font=Maple Mono NF CN 11

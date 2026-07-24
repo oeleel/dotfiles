@@ -1,0 +1,27 @@
+#!/bin/bash
+# Network status as JSON for the eww network dropdown.
+route=$(ip -j route get 1.1.1.1 2>/dev/null)
+dev=$(jq -r '.[0].dev // empty' <<< "$route")
+ipaddr=$(jq -r '.[0].prefsrc // "—"' <<< "$route")
+
+if rfkill list wifi 2>/dev/null | grep -q "Soft blocked: yes"; then
+  wifi_on=false
+else
+  wifi_on=true
+fi
+
+if [[ $dev == wl* ]]; then
+  kind="Wi-Fi"
+  name=$(iwctl station "$dev" show 2>/dev/null | sed -n 's/^\s*Connected network\s*//p' | head -1 | xargs)
+  name=${name:-"connected"}
+elif [[ -n $dev ]]; then
+  kind="Ethernet"
+  name="Wired"
+else
+  kind="Offline"
+  name="No connection"
+  ipaddr="—"
+fi
+
+jq -n --arg kind "$kind" --arg name "$name" --arg ip "$ipaddr" --argjson wifi_on "$wifi_on" \
+  '{kind: $kind, name: $name, ip: $ip, wifi_on: $wifi_on}'

@@ -1,0 +1,80 @@
+// Colors are generated from the current Omarchy theme by the
+// theme-set.d/eww-colors hook — do not edit _colors.scss by hand.
+@import "colors";
+
+.audio-popup,
+.glass-popup {
+  background-color: $background;
+  color: $foreground;
+  border: 1px solid $border;
+  padding: 14px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.closer {
+  background-color: transparent;
+}
+
+.dim {
+  color: $text;
+}
+
+.bt-device {
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: $text;
+}
+
+.bt-device:hover {
+  color: $selected-text;
+}
+
+calendar,
+.cal {
+  color: $text;
+  padding: 4px;
+}
+
+calendar:selected {
+  color: $selected-text;
+}
+
+calendar.header,
+calendar.button {
+  color: $selected-text;
+}
+
+.output-line {
+  color: $text;
+}
+
+.switch-btn {
+  background-color: $base;
+  color: $text;
+  border: 1px solid $border;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.switch-btn:hover {
+  color: $selected-text;
+  border-color: $selected-text;
+}
+
+.vol-slider trough {
+  background-color: $base;
+  border: 1px solid $border;
+  border-radius: 4px;
+  min-height: 10px;
+  min-width: 140px;
+}
+
+.vol-slider trough highlight {
+  background-color: $selected-text;
+  border-radius: 4px;
+}
+
+.vol-percent {
+  color: $text;
+}

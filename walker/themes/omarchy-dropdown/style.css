@@ -1,0 +1,8 @@
+/* Dropdown variant of the stock Omarchy walker theme — inherits all styling,
+   only the layout.xml anchoring differs (top-right instead of centered). */
+@import "/home/leo/.local/share/omarchy/default/walker/themes/omarchy-default/style.css";
+
+/* Smaller, denser look for the dropdown */
+* {
+  font-size: 13px;
+}

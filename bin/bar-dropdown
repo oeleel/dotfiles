@@ -1,0 +1,71 @@
+#!/bin/bash
+# Exclusive glass dropdowns for Waybar: opening one closes the others.
+# Usage: bar-dropdown <network|bluetooth|calendar>
+#        bar-dropdown --refresh <network|bluetooth>
+#        bar-dropdown --wifi-toggle
+
+ALL="network-popup bluetooth-popup calendar-popup audio-popup"
+
+ensure_daemon() {
+  eww ping >/dev/null 2>&1 && return
+  eww daemon >/dev/null 2>&1 &
+  for _ in $(seq 20); do
+    eww ping >/dev/null 2>&1 && return
+    sleep 0.1
+  done
+}
+
+refresh() {
+  case "$1" in
+    network) eww update net-info="$(bar-net-json)" ;;
+    bluetooth) eww update bt-info="$(bar-bt-json)" ;;
+  esac
+}
+
+close_all() {
+  local open
+  open=$(eww active-windows 2>/dev/null)
+  for w in $ALL closer; do
+    grep -q "$w" <<< "$open" && eww close "$w"
+  done
+}
+
+ensure_daemon
+
+case "$1" in
+  --close-all)
+    close_all
+    exit 0
+    ;;
+  --refresh)
+    refresh "$2"
+    exit 0
+    ;;
+  --wifi-toggle)
+    if rfkill list wifi | grep -q "Soft blocked: yes"; then
+      rfkill unblock wifi
+    else
+      rfkill block wifi
+    fi
+    sleep 0.5
+    refresh network
+    exit 0
+    ;;
+esac
+
+win="$1-popup"
+open=$(eww active-windows 2>/dev/null)
+
+if grep -q "$win" <<< "$open"; then
+  close_all
+  exit 0
+fi
+
+for w in $ALL; do
+  grep -q "$w" <<< "$open" && eww close "$w"
+done
+
+refresh "$1"
+# click-catcher first so the popup stacks above it
+grep -q closer <<< "$open" || eww open closer
+eww open "$win"
