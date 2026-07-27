@@ -1,5 +1,18 @@
 # Global conventions
 
+## Knowledge base
+My personal knowledge system lives at `~/knowledge` — who I am, how I work, what
+I'm building, and what's next. Loaded every session:
+
+@~/knowledge/me.md
+@~/knowledge/preferences.md
+@~/knowledge/projects/_index.md
+@~/knowledge/next-actions.md
+
+Coding style loads contextually from `~/.claude/rules/` (symlinked from
+`~/knowledge/style/`). On-demand detail (per-project pages, notes) lives in
+`~/knowledge` and is read when relevant.
+
 ## Git workflow (multi-device: Linux desktop + phone remote-control + MacBook)
 GitHub is the single source of truth. All three devices sync through it, so keep
 every repo committed and pushed frequently — stale local state is what breaks the
