@@ -25,6 +25,13 @@ flow between devices.
 - **One source of truth.** Prefer working the same branch across devices and
   syncing through GitHub rather than spawning parallel branches that later need
   reconciling.
+- **A feature branch per session for non-trivial work.** Any substantial change —
+  and *especially* remote-control / parallel sessions, or when another session may
+  already be working the same repo — happens on its own `feature/…` branch, never
+  directly on `main`. This keeps two concurrent sessions from interleaving commits
+  on `main` (which otherwise tangles history). Direct-to-`main` is fine only for
+  small, sequential, solo edits (e.g. a quick dotfiles tweak). Merge feature
+  branches into `main` via squash so `main` gets one clean commit per unit.
 
 ## Remote-control sessions (driven from the phone while away)
 - I can't intervene mid-step, so work to the next milestone, commit it with a real
