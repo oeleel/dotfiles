@@ -1,0 +1,5 @@
+[config]
+
+[templates.omarchy]
+input_path  = "~/.config/matugen/templates/omarchy-colors.toml"
+output_path = "~/.config/omarchy/themes/dynamic/colors.toml"

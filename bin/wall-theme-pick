@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# wall-theme-pick — choose a wallpaper via walker (dmenu), then retint the shell from it.
+# Wallpaper source dir is $WALLPAPER_DIR, default ~/Pictures/wallpapers.
+set -euo pipefail
+
+WALLDIR="${WALLPAPER_DIR:-$HOME/Pictures/wallpapers}"
+
+mapfile -t FILES < <(
+  find -L "$WALLDIR" -type f \
+    \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) | sort
+)
+if (( ${#FILES[@]} == 0 )); then
+  notify-send "wall-theme" "No images in $WALLDIR" -t 3000 || true
+  exit 1
+fi
+
+choice="$(printf '%s\n' "${FILES[@]##*/}" | walker --dmenu -p "Wallpaper theme")"
+[[ -n "$choice" ]] || exit 0   # user cancelled
+
+for f in "${FILES[@]}"; do
+  if [[ "${f##*/}" == "$choice" ]]; then
+    exec wall-theme "$f"
+  fi
+done

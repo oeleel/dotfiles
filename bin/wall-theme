@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# wall-theme <path-to-image>
+# Set a wallpaper AND retint the core shell from it (matugen -> Omarchy "dynamic" theme).
+set -euo pipefail
+
+# matugen was installed via `cargo install` -> ~/.cargo/bin, which the Hyprland/uwsm
+# session PATH may not include. Ensure it's findable regardless of caller context.
+[[ ":$PATH:" == *":$HOME/.cargo/bin:"* ]] || export PATH="$HOME/.cargo/bin:$PATH"
+
+WALL="${1:-}"
+[[ -n "$WALL" ]] || { echo "Usage: wall-theme <path-to-image>" >&2; exit 1; }
+WALL="$(realpath "$WALL")"
+[[ -f "$WALL" ]] || { echo "No such file: $WALL" >&2; exit 1; }
+
+DYN="$HOME/.config/omarchy/themes/dynamic"
+
+# 1) Generate colors.toml for the dynamic theme from the wallpaper.
+#    --prefer saturation: pick the most colorful hue as the Material You seed (accent-forward).
+#    Required in non-interactive contexts when the image yields multiple candidate source colors.
+matugen image "$WALL" --mode dark --type scheme-tonal-spot --prefer saturation
+
+# 2) Keep the wallpaper inside the theme (for bg cycling / preview).
+mkdir -p "$DYN/backgrounds"
+find "$DYN/backgrounds" -maxdepth 1 -type f -delete
+cp -f "$WALL" "$DYN/backgrounds/$(basename "$WALL")"
+
+# 3) Apply theme (Omarchy regenerates waybar/walker/mako/hyprland from colors.toml),
+#    skip the auto bg-cycle, then pin OUR wallpaper.
+OMARCHY_THEME_SKIP_BACKGROUND=1 omarchy-theme-set dynamic
+omarchy-theme-bg-set "$WALL"
+
+notify-send "🎨 Theme synced to wallpaper" "$(basename "$WALL")" -t 2000 || true
