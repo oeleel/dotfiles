@@ -1,6 +1,0 @@
-#!/bin/bash
-# Quake-style scratchpad: ensure a dropdown terminal exists, then toggle its visibility.
-if ! hyprctl clients | grep -q 'class: dropdown-terminal'; then
-  uwsm-app -- alacritty --class dropdown-terminal &
-fi
-hyprctl dispatch togglespecialworkspace scratchpad

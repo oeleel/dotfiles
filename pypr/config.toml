@@ -1,0 +1,13 @@
+[pyprland]
+plugins = ["scratchpads"]
+
+# Quake-style dropdown terminal (SUPER+S). Replaces the old scratchpad-toggle script.
+# Slides in from the top, auto-hides when it loses focus, and spawns lazily on first use.
+[scratchpads.term]
+command = "uwsm-app -- alacritty --class dropdown-terminal"
+class = "dropdown-terminal"
+animation = "fromTop"
+size = "1600px 850px"
+margin = 40
+unfocus = "hide"
+lazy = true
