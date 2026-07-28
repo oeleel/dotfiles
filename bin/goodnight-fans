@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# goodnight-fans — root helper for the goodnight button's quiet mode.
+#
+# Installed to /usr/local/bin (root-owned) with a NOPASSWD sudoers rule scoped
+# to exactly this script, so `goodnight` can call it without a prompt.
+#
+# night: case + radiator fans (pwm2-4) to a fixed low duty. AIO pump (pwm7) is
+#        NEVER touched — pumps run full speed. Caveat: fixed duty means no
+#        thermal ramp; fine for an idle overnight box, don't leave heavy
+#        compute running in night mode.
+# day:   hand pwm2-4 back to the firmware's auto curve (enable=5).
+
+# ~24% duty — above typical fan stall (~20%), quiet enough to sleep next to.
+NIGHT_PWM=60
+FAN_CHANNELS=(2 3 4)
+CHIP="nct6799"
+
+hwmon=""
+for h in /sys/class/hwmon/hwmon*; do
+  [[ $(cat "$h/name" 2>/dev/null) == "$CHIP" ]] && hwmon=$h && break
+done
+if [[ -z $hwmon ]]; then
+  echo "goodnight-fans: $CHIP hwmon not found (is nct6775 loaded?)" >&2
+  exit 1
+fi
+
+case "$1" in
+night)
+  for i in "${FAN_CHANNELS[@]}"; do
+    echo 1 >"$hwmon/pwm${i}_enable"
+    echo $NIGHT_PWM >"$hwmon/pwm${i}"
+  done
+  ;;
+day)
+  for i in "${FAN_CHANNELS[@]}"; do
+    echo 5 >"$hwmon/pwm${i}_enable"
+  done
+  ;;
+status)
+  for i in "${FAN_CHANNELS[@]}"; do
+    echo "pwm$i: duty=$(cat "$hwmon/pwm$i") enable=$(cat "$hwmon/pwm${i}_enable") rpm=$(cat "$hwmon/fan${i}_input")"
+  done
+  ;;
+*)
+  echo "usage: goodnight-fans <night|day|status>" >&2
+  exit 1
+  ;;
+esac

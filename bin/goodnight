@@ -42,14 +42,28 @@ rgb_restore() {
   fi
 }
 
+# Root helper (scoped NOPASSWD sudoers rule); silently skipped if not installed.
+fans() { sudo -n /usr/local/bin/goodnight-fans "$1" 2>/dev/null; }
+
 night() {
   touch "$STATE_FILE"
   refresh_waybar
   hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null
   rgb_off
+  fans night
   # Locks, then turns displays off after 3s; unlock in the morning runs
   # omarchy-system-wake for us.
   omarchy-system-lock
+
+  # Auto-restore on unlock: wait for hyprlock to appear (lock is async), then
+  # for it to exit — that's the morning unlock. Guard on the state file so a
+  # manual day-toggle can't double-restore.
+  (
+    for _ in $(seq 50); do pidof hyprlock >/dev/null && break; sleep 0.2; done
+    while pidof hyprlock >/dev/null; do sleep 2; done
+    [[ -f $STATE_FILE ]] && "$0" day
+  ) >/dev/null 2>&1 &
+  disown
 }
 
 day() {
@@ -58,6 +72,7 @@ day() {
   hyprctl keyword misc:mouse_move_enables_dpms true >/dev/null
   hyprctl dispatch dpms on >/dev/null
   rgb_restore
+  fans day
 }
 
 status() {
@@ -72,9 +87,11 @@ case "${1:-toggle}" in
 toggle)
   if [[ -f $STATE_FILE ]]; then day; else night; fi
   ;;
+day) day ;;
+night) night ;;
 status) status ;;
 *)
-  echo "usage: goodnight [toggle|status]" >&2
+  echo "usage: goodnight [toggle|day|night|status]" >&2
   exit 1
   ;;
 esac
