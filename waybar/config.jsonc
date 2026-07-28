@@ -15,7 +15,8 @@
     "bluetooth",
     "network",
     "pulseaudio",
-    "cpu"
+    "cpu",
+    "custom/goodnight"
   ],
   "hyprland/workspaces": {
     "on-click": "activate",
@@ -47,6 +48,14 @@
     "on-click": "omarchy-menu",
     "on-click-right": "xdg-terminal-exec",
     "tooltip-format": "Omarchy Menu\n\nSuper + Alt + Space"
+  },
+  "custom/goodnight": {
+    "exec": "goodnight status",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 11,
+    "on-click": "goodnight toggle",
+    "tooltip": true
   },
   "custom/update": {
     "format": "",

@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# goodnight — bedtime toggle for the waybar moon button.
+#
+# Night mode turns the panels and RGB off but leaves the session fully alive:
+# nothing closes, Claude sessions keep running. Wake is a KEY PRESS only —
+# mouse-move wake is disabled for the night so a desk bump doesn't light up
+# the room (Hyprland's key_press_enables_dpms handles the morning).
+#
+# Usage: goodnight [toggle|status]
+#   toggle (default) — flip night mode
+#   status           — emit waybar JSON for the custom/goodnight module
+#
+# RGB restore relies on an OpenRGB profile named "day" (save once in the
+# OpenRGB GUI: set lights how you like them → Profiles → Save → "day").
+# Without it, night still blacks the lights; morning just can't restore them.
+
+STATE_FILE="$HOME/.local/state/goodnight.active"
+DAY_PROFILE="day"
+WAYBAR_SIGNAL=11
+
+refresh_waybar() { pkill -RTMIN+$WAYBAR_SIGNAL waybar; }
+
+rgb_off() {
+  command -v openrgb >/dev/null || return 0
+  openrgb --mode static --color 000000 >/dev/null 2>&1
+}
+
+rgb_restore() {
+  command -v openrgb >/dev/null || return 0
+  if ls "$HOME/.config/OpenRGB/$DAY_PROFILE".* >/dev/null 2>&1; then
+    openrgb --profile "$DAY_PROFILE" >/dev/null 2>&1
+  else
+    notify-send -u low "󰤄  No OpenRGB \"$DAY_PROFILE\" profile — RGB left off"
+  fi
+}
+
+night() {
+  touch "$STATE_FILE"
+  refresh_waybar
+  hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null
+  rgb_off
+  # Locks, then turns displays off after 3s; unlock in the morning runs
+  # omarchy-system-wake for us.
+  omarchy-system-lock
+}
+
+day() {
+  rm -f "$STATE_FILE"
+  refresh_waybar
+  hyprctl keyword misc:mouse_move_enables_dpms true >/dev/null
+  hyprctl dispatch dpms on >/dev/null
+  rgb_restore
+}
+
+status() {
+  if [[ -f $STATE_FILE ]]; then
+    echo '{"text": "󰤄", "tooltip": "Night mode on — click to restore RGB + mouse wake", "class": "active"}'
+  else
+    echo '{"text": "󰤄", "tooltip": "Goodnight — screens + RGB off, session stays alive (any key wakes)", "class": ""}'
+  fi
+}
+
+case "${1:-toggle}" in
+toggle)
+  if [[ -f $STATE_FILE ]]; then day; else night; fi
+  ;;
+status) status ;;
+*)
+  echo "usage: goodnight [toggle|status]" >&2
+  exit 1
+  ;;
+esac
