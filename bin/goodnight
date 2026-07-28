@@ -23,7 +23,8 @@ refresh_waybar() { pkill -RTMIN+$WAYBAR_SIGNAL waybar; }
 
 rgb_off() {
   command -v openrgb >/dev/null || return 0
-  openrgb --mode static --color 000000 >/dev/null 2>&1
+  # Direct (not Static): the Corsair DDR5 sticks only expose Direct mode.
+  openrgb --mode direct --color 000000 >/dev/null 2>&1
 }
 
 rgb_restore() {
