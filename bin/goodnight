@@ -17,19 +17,25 @@
 
 STATE_FILE="$HOME/.local/state/goodnight.active"
 DAY_PROFILE="day"
+NIGHT_PROFILE="night"
 WAYBAR_SIGNAL=11
 
 refresh_waybar() { pkill -RTMIN+$WAYBAR_SIGNAL waybar; }
 
 rgb_off() {
   command -v openrgb >/dev/null || return 0
-  # Direct (not Static): the Corsair DDR5 sticks only expose Direct mode.
-  openrgb --mode direct --color 000000 >/dev/null 2>&1
+  # Profile applies hardware modes (Custom on Corsair DDR5, Static on Aura) per
+  # device name — survives openrgb exiting and device-index reordering.
+  if [[ -f $HOME/.config/OpenRGB/$NIGHT_PROFILE.orp ]]; then
+    openrgb --profile "$NIGHT_PROFILE" >/dev/null 2>&1
+  else
+    openrgb --mode direct --color 000000 >/dev/null 2>&1
+  fi
 }
 
 rgb_restore() {
   command -v openrgb >/dev/null || return 0
-  if ls "$HOME/.config/OpenRGB/$DAY_PROFILE".* >/dev/null 2>&1; then
+  if [[ -f $HOME/.config/OpenRGB/$DAY_PROFILE.orp ]]; then
     openrgb --profile "$DAY_PROFILE" >/dev/null 2>&1
   else
     notify-send -u low "󰤄  No OpenRGB \"$DAY_PROFILE\" profile — RGB left off"
