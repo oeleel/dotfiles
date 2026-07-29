@@ -2,7 +2,7 @@
 These are common instructions for Leo's agents across all scenarios 
 
 ## General Guidelines
-- Never use the em dash "—". Use plain dash "-" instead
+- Never use the em dash "-". Use plain dash "-" instead
 - When writing commit messages, NEVER auto-add your agent name as co-author
 - When making technical decisions, do not give much weight to development cost. Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability
 - When end-to-end testing a product, Be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed as well.  
@@ -10,7 +10,7 @@ These are common instructions for Leo's agents across all scenarios
 - When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible
 
 ## Knowledge base
-My personal knowledge system lives at `~/knowledge` — who I am, how I work, what
+My personal knowledge system lives at `~/knowledge` - who I am, how I work, what
 I'm building, and what's next. Loaded every session:
 
 @~/knowledge/me.md
@@ -24,20 +24,20 @@ Coding style loads contextually from `~/.claude/rules/` (symlinked from
 
 ## Git workflow (multi-device: Linux desktop + phone remote-control + MacBook)
 GitHub is the single source of truth. All three devices sync through it, so keep
-every repo committed and pushed frequently — stale local state is what breaks the
+every repo committed and pushed frequently - stale local state is what breaks the
 flow between devices.
 
 - **Commit at milestones, with real messages.** When a coherent unit of code
   works (compiles/runs/a sub-feature is done), commit it with a clear, descriptive
-  message. That is the primary commit mechanism — clean, intentional history. Do
+  message. That is the primary commit mechanism - clean, intentional history. Do
   NOT scatter half-done WIP; a Stop hook safety-nets leftovers on feature branches,
   so you should rarely be the reason work is uncommitted.
 - **Protect `main`.** `main`/`master` must stay clean: only intentional,
   milestone-quality, working commits. Never leave junk or half-done state on it.
-  The auto-commit hook is hands-off on protected branches by design — do real
+  The auto-commit hook is hands-off on protected branches by design - do real
   milestone commits there yourself, or do exploratory work on a feature branch.
 - **Pushes are for device handoff.** Pushing is how the phone and MacBook get the
-  latest code, so push when leaving the desk or switching devices — and otherwise
+  latest code, so push when leaving the desk or switching devices - and otherwise
   when there's a reason to. Only ever push from a working/coherent state so pushed
   branches are never broken or unusable. **Always ask before `git push`** (unless
   I've said "push when done"); direct pushes to `main` are allowed with approval.
@@ -47,9 +47,9 @@ flow between devices.
 - **One source of truth.** Prefer working the same branch across devices and
   syncing through GitHub rather than spawning parallel branches that later need
   reconciling.
-- **A feature branch per session for non-trivial work.** Any substantial change —
+- **A feature branch per session for non-trivial work.** Any substantial change -
   and *especially* remote-control / parallel sessions, or when another session may
-  already be working the same repo — happens on its own `feature/…` branch, never
+  already be working the same repo - happens on its own `feature/…` branch, never
   directly on `main`. This keeps two concurrent sessions from interleaving commits
   on `main` (which otherwise tangles history). Direct-to-`main` is fine only for
   small, sequential, solo edits (e.g. a quick dotfiles tweak). Merge feature
@@ -57,7 +57,7 @@ flow between devices.
 
 ## Remote-control sessions (driven from the phone while away)
 - I can't intervene mid-step, so work to the next milestone, commit it with a real
-  message, and then ask to push — rather than stopping (or pushing) half-done.
+  message, and then ask to push - rather than stopping (or pushing) half-done.
 - Never push a broken/incomplete state; the whole point of the push is that the
   other device can pick up working code.
 - Surface anything needing my decision via a notification-worthy summary at the end.
