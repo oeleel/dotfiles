@@ -40,6 +40,13 @@ primary = next((m for m in mon_list if m.get("name") == primary_name), None)
 for c in clients:
     if c.get("class") == "wispr-flow" and c.get("title") == "Status":
         addr = c["address"]; w, h = c["size"]
+        # Pin so the bar shows on every workspace. The static `pin` windowrule is
+        # unreliable here (the window maps before its title is "Status"), so we
+        # pin from this listener instead. `pin` dispatch is a TOGGLE, so only
+        # fire it when not already pinned to stay idempotent across events.
+        if not c.get("pinned"):
+            subprocess.run(["hyprctl", "dispatch", "pin", f"address:{addr}"],
+                           stdout=subprocess.DEVNULL)
         m = primary or mons.get(c["monitor"])
         if not m:
             continue
