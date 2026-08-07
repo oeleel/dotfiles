@@ -45,15 +45,52 @@ rgb_restore() {
 # Root helper (scoped NOPASSWD sudoers rule); silently skipped if not installed.
 fans() { sudo -n /usr/local/bin/goodnight-fans "$1" 2>/dev/null; }
 
+# Pause any playing media so a video/track can't hold a display awake all night.
+# Not resumed on wake by design — you don't want audio on a morning unlock.
+media_pause() { command -v playerctl >/dev/null && playerctl -a pause >/dev/null 2>&1; return 0; }
+
 night() {
   touch "$STATE_FILE"
   refresh_waybar
   hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null
   rgb_off
+  media_pause
   fans night
   # Locks, then turns displays off after 3s; unlock in the morning runs
   # omarchy-system-wake for us.
   omarchy-system-lock
+
+  # Keep the displays off ALL night. omarchy-system-lock only fires a single
+  # dpms-off ~3s after locking, but background clients (the shell bar, a browser
+  # tab, a live terminal) commit frames every ~10s and this Hyprland re-enables
+  # DPMS on those commits — so a one-shot never holds and a monitor relights to
+  # the lock screen minutes later (the HDMI one, whose workspace has the most
+  # live content, is the usual offender). Re-assert dpms-off for the whole lock:
+  # whenever a monitor reports ON, blank it again (within ~$DPMS_POLL s).
+  #
+  # Morning-unlock guard: input wakes a display faster than the ~10s app cadence,
+  # so if a monitor lights up within one poll of our last blank, that's you
+  # waking to type your password — stand down for $UNLOCK_STANDDOWN s instead of
+  # fighting your keystrokes. The loop ends the moment hyprlock exits (unlock) or
+  # the state file is cleared (manual day-toggle).
+  DPMS_POLL=1
+  UNLOCK_STANDDOWN=25
+  (
+    for _ in $(seq 50); do pidof hyprlock >/dev/null && break; sleep 0.2; done
+    last_off=-100
+    while { [[ -f $STATE_FILE ]] && pidof hyprlock >/dev/null; }; do
+      if hyprctl monitors -j | grep -q '"dpmsStatus": true'; then
+        if (( SECONDS - last_off <= DPMS_POLL + 1 )); then
+          sleep "$UNLOCK_STANDDOWN"
+          continue
+        fi
+        hyprctl dispatch dpms off >/dev/null 2>&1
+        last_off=$SECONDS
+      fi
+      sleep "$DPMS_POLL"
+    done
+  ) >/dev/null 2>&1 &
+  disown
 
   # Auto-restore on unlock: wait for hyprlock to appear (lock is async), then
   # for it to exit — that's the morning unlock. Guard on the state file so a
