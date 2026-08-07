@@ -1,5 +1,8 @@
 {
-  "model": "opus[1m]",
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "model": "fable",
   "hooks": {
     "SessionStart": [
       {
@@ -32,6 +35,26 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/home/leo/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lavish-axi",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
@@ -51,12 +74,10 @@
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
   },
-  "permissions": {
-    "defaultMode": "auto"
-  },
+  "tui": "default",
+  "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "agentPushNotifEnabled": true
 }
