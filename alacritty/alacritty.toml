@@ -27,6 +27,12 @@ bindings = [
 # (Tradeoff: overrides readline's Ctrl+V "quoted-insert"; use Ctrl+Shift+V-free
 # paths if you need verbatim key entry.)
 { key = "V", mods = "Control", action = "Paste" },
+# Ctrl+Alt+V sends a raw Ctrl+V byte (0x16) THROUGH to the running app instead of
+# Alacritty pasting. This lets Claude Code (and other TUIs) receive Ctrl+V for
+# their own paste — e.g. pasting an image from the clipboard — since plain Ctrl+V
+# above is consumed by Alacritty for Wispr dictation. So: Ctrl+V = paste text
+# (dictation), Ctrl+Alt+V = app-level paste (Claude Code image paste).
+{ key = "V", mods = "Control|Alt", chars = "\u0016" },
 # Send Shift+Return as CSI-u so TUIs can distinguish it from Return without treating it as Alt+Return.
 { key = "Return", mods = "Shift", chars = "\u001B[13;2u" },
 # Legacy encoding sends Alt+Shift+Return the same as Alt+Return; send CSI-u so tmux can match M-S-Enter.
