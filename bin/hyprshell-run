@@ -1,0 +1,103 @@
+#!/bin/bash
+# hyprshell-run - supervised launcher for the hyprshell daemon.
+#
+# Why this exists: hyprshell (dev alpha) registers binds on Shift_L/R, Alt_L/R,
+# Tab, and grave over Hyprland IPC. When the daemon dies, those binds go stale
+# but keep firing - every Shift press then spawns a `hyprshell socat` client
+# that spins at 100% CPU against the dead socket. Crash/restart cycles stack
+# duplicate bind sets on top of each other (the 2026-08-07 "shift stutter +
+# fans" incident had ~4,300 of them). And as a bare exec-once, the daemon's
+# stderr went nowhere, so the crash cause was unknowable.
+#
+# This wrapper guarantees:
+#   1. Logs   - daemon output lands in ~/.local/state/hyprshell/run.log.
+#   2. Hygiene - any hyprshell binds present while the daemon is down are
+#      stale; they are wiped (hyprctl reload) before every (re)start, so
+#      duplicates can never accumulate.
+#   3. Recovery - the daemon is restarted after a crash, so stale binds never
+#      sit there firing execs at a dead socket for long.
+#   4. A loud stop - a crash loop caps out with a critical notification
+#      instead of thrashing forever.
+
+set -u
+
+LOG_DIR="$HOME/.local/state/hyprshell"
+LOG="$LOG_DIR/run.log"
+MAX_LOG_BYTES=$((512 * 1024))
+RESTART_DELAY_SECS=2
+CRASH_WINDOW_SECS=120
+MAX_CRASHES_IN_WINDOW=5
+
+mkdir -p "$LOG_DIR"
+
+log() {
+    printf '[%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$1" >> "$LOG"
+}
+
+rotate_log() {
+    local size
+    size=$(stat -c%s "$LOG" 2>/dev/null || echo 0)
+    if (( size > MAX_LOG_BYTES )); then
+        mv -f "$LOG" "$LOG.1"
+    fi
+}
+
+compositor_alive() {
+    hyprctl version > /dev/null 2>&1
+}
+
+# The daemon is not running at every call site of this function, so ANY
+# hyprshell bind in the compositor is stale. hyprctl reload rebuilds binds
+# from config, which is the only reliable way to drop IPC-registered ones.
+clear_stale_binds() {
+    local count
+    count=$(hyprctl binds 2>/dev/null | grep -c hyprshell)
+    if (( count > 0 )); then
+        log "clearing $count stale hyprshell bind lines via hyprctl reload"
+        hyprctl reload > /dev/null 2>&1
+    fi
+}
+
+declare -a crash_times=()
+
+rotate_log
+log "supervisor started (pid $$)"
+
+while :; do
+    if ! compositor_alive; then
+        log "compositor gone, exiting supervisor"
+        exit 0
+    fi
+
+    clear_stale_binds
+
+    log "starting hyprshell daemon"
+    HYPRSHELL_EXPERIMENTAL=1 "$HOME/.local/bin/hyprshell" run >> "$LOG" 2>&1
+    code=$?
+
+    if ! compositor_alive; then
+        log "daemon exited (code $code) with compositor gone, exiting supervisor"
+        exit 0
+    fi
+
+    log "hyprshell daemon exited with code $code"
+    notify-send -u normal "hyprshell crashed (exit $code)" \
+        "Restarting and clearing stale binds. Log: ~/.local/state/hyprshell/run.log"
+
+    now=$(date +%s)
+    crash_times+=("$now")
+    recent=0
+    for t in "${crash_times[@]}"; do
+        (( now - t <= CRASH_WINDOW_SECS )) && (( recent++ ))
+    done
+    if (( recent >= MAX_CRASHES_IN_WINDOW )); then
+        log "crash loop: $recent crashes in ${CRASH_WINDOW_SECS}s, giving up"
+        clear_stale_binds
+        notify-send -u critical "hyprshell crash loop - giving up" \
+            "$recent crashes in ${CRASH_WINDOW_SECS}s. Stale binds cleared; ALT+TAB is down. See ~/.local/state/hyprshell/run.log"
+        exit 1
+    fi
+
+    rotate_log
+    sleep "$RESTART_DELAY_SECS"
+done
