@@ -1,0 +1,125 @@
+# Noctalia v5 — trial config (floating pills over the wallpaper, wano-night colors)
+# Palette is set via `noctalia msg color-scheme-set custom wano-night` (writes settings.toml).
+
+[bar.default]
+# Top bar again (user preference), still one unified slab. The taskbar widget
+# rides in the center beside the clock so windows/workspaces stay visible.
+position = "top"
+start  = ["launcher", "workspaces"]
+center = ["clock"]
+end    = ["volume", "audio-swap", "tray", "network", "bluetooth", "battery", "goodnight", "session", "control-center"]
+
+# One unified slab (Windows-taskbar style) instead of per-widget pills:
+# solid dark glass with a hairline outline so the bar reads as a single shape.
+background_opacity   = 0.78
+reserve_space        = true
+shadow               = false
+contact_shadow       = false
+concave_edge_corners = false
+border_width         = 1.0
+panel_overlap        = 0
+
+# Capsules off — widgets sit directly on the slab.
+capsule         = false
+capsule_fill    = "surface"
+capsule_opacity = 0.72
+capsule_padding = 8.0
+radius          = 13
+
+# Float off the edges, roomy gaps so pills read as separate islands
+margin_edge    = 8
+margin_ends    = 16
+widget_spacing = 12
+padding        = 6
+thickness      = 42
+
+# ── Dock ──────────────────────────────────────────────────────────────────────
+# macOS-style dock: a well-defined frosted-glass island with big icons and
+# real magnification, distinct from the bar's compact capsules on purpose.
+[dock]
+enabled  = true
+position = "bottom"
+
+# Follow the focused monitor rather than painting a dock on both DP-3 and HDMI-A-1.
+active_monitor_only = true
+
+# Defined shape: slightly denser glass than the bar's 0.72 capsules, plus a
+# hairline outline and shadow so the slab reads against dark content below.
+background_opacity   = 0.78
+border_width         = 1.0
+shadow               = false
+concave_edge_corners = false
+radius               = 16
+
+# Float, don't reserve. Hyprland tiles: a permanently reserved bottom strip would
+# shrink every window for a dock that is mostly idle.
+margin_edge   = 10
+reserve_space = false
+layer         = "top"
+
+# Slide away when the pointer leaves; slide back when it reaches the bottom edge.
+# This is what stops the dock sitting on top of window content - with
+# reserve_space = false and no auto-hide it just floats over whatever is below.
+auto_hide       = true
+smart_auto_hide = false
+
+# macOS proportions: 48px icons with generous breathing room.
+icon_size          = 36
+main_axis_padding  = 12
+cross_axis_padding = 7
+item_spacing       = 10
+
+magnification       = true
+magnification_scale = 1.20
+
+# Running-state: dots for presence, plus a count badge on 2+ windows. The count is
+# the only per-instance signal the dock has - it has no hover window list.
+show_running        = true
+show_dots           = true
+show_instance_count = true
+
+# The bar already carries a `launcher` widget in `start` - no second one here.
+launcher_position = "none"
+
+pinned = [
+  "brave-browser",
+  "Alacritty",
+  "org.gnome.Nautilus",
+  "obsidian",
+  "spotify",
+]
+
+# Click-to-swap audio output (headphones <-> speakers) — lives in the bar, like the old Waybar module.
+[widget.audio-swap]
+type    = "custom_button"
+glyph   = "headphones"
+tooltip = "Toggle audio output: headphones / speakers"
+
+[widget.audio-swap.actions]
+left = "exec /home/leo/.local/bin/audio-toggle-output"
+
+# Bedtime button: screens + RGB off, session stays alive (any key wakes).
+# Click again in the morning to restore RGB + mouse wake.
+[widget.goodnight]
+type    = "custom_button"
+glyph   = "moon-stars"
+tooltip = "Goodnight — screens + RGB off, session stays alive (any key wakes)"
+
+[widget.goodnight.actions]
+left = "exec /home/leo/.local/bin/goodnight toggle"
+
+# Match the old Waybar font
+[shell]
+font_family = "Maple Mono NF CN"
+
+# TEST: animations off to check whether the dock hide ghost-frame disappears
+[shell.animation]
+enabled = false
+
+# Windows-style taskbar widget: pinned launchers + one entry per open window,
+# grouped by workspace with labels.
+[widget.wintasks]
+type              = "taskbar"
+grouping          = "workspace"
+workspace_labels  = true
+pinned            = ["brave-browser", "Alacritty", "org.gnome.Nautilus", "obsidian", "spotify"]
