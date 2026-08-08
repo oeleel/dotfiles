@@ -1,4 +1,4 @@
-# Noctalia v5 — trial config (floating pills over the wallpaper, wano-night colors)
+# Noctalia v5 — flush full-width top slab + compact auto-hide dock, wano-night colors
 # Palette is set via `noctalia msg color-scheme-set custom wano-night` (writes settings.toml).
 
 [bar.default]
@@ -24,11 +24,11 @@ capsule         = false
 capsule_fill    = "surface"
 capsule_opacity = 0.72
 capsule_padding = 8.0
-radius          = 13
+radius          = 0
 
-# Float off the edges, roomy gaps so pills read as separate islands
-margin_edge    = 8
-margin_ends    = 16
+# Flush full-width: the slab spans the entire top edge, no float, square corners
+margin_edge    = 0
+margin_ends    = 0
 widget_spacing = 12
 padding        = 6
 thickness      = 42
