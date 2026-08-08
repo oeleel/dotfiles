@@ -16,7 +16,7 @@ reserve_space        = true
 shadow               = false
 contact_shadow       = false
 concave_edge_corners = false
-border_width         = 1.0
+border_width         = 0.0
 panel_overlap        = 0
 
 # Capsules off — widgets sit directly on the slab.
