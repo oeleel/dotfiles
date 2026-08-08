@@ -30,7 +30,7 @@ radius          = 0
 margin_edge    = 0
 margin_ends    = 0
 widget_spacing = 12
-padding        = 6
+padding        = 2
 thickness      = 42
 
 # ── Dock ──────────────────────────────────────────────────────────────────────
@@ -107,6 +107,11 @@ tooltip = "Goodnight — screens + RGB off, session stays alive (any key wakes)"
 
 [widget.goodnight.actions]
 left = "exec /home/leo/.local/bin/goodnight toggle"
+
+# Bigger clock in the bar center (scale is the clock widget's size knob)
+[widget.clock]
+type  = "clock"
+scale = 1.5
 
 # Match the old Waybar font
 [shell]
