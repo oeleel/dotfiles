@@ -31,7 +31,7 @@ margin_edge    = 0
 margin_ends    = 0
 widget_spacing = 12
 padding        = 2
-thickness      = 42
+thickness      = 38
 
 # ── Dock ──────────────────────────────────────────────────────────────────────
 # macOS-style dock: a well-defined frosted-glass island with big icons and
