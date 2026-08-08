@@ -111,7 +111,7 @@ left = "exec /home/leo/.local/bin/goodnight toggle"
 # Bigger clock in the bar center (scale is the clock widget's size knob)
 [widget.clock]
 type  = "clock"
-scale = 1.5
+scale = 1.1
 
 # Match the old Waybar font
 [shell]
