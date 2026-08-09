@@ -19,17 +19,21 @@ concave_edge_corners = false
 border_width         = 0.0
 panel_overlap        = 0
 
-# Capsules off — widgets sit directly on the slab.
-capsule         = false
-capsule_fill    = "surface"
-capsule_opacity = 0.72
-capsule_padding = 8.0
-radius          = 0
+# Capsules off — widgets sit directly on the slab. Hover still draws a soft
+# glow pill per widget; capsule_padding/thickness size that pill so it sits
+# inset within the bar instead of touching its edges.
+capsule           = false
+capsule_fill      = "surface"
+capsule_opacity   = 0.72
+capsule_padding   = 10.0
+capsule_thickness = 0.8
+hover_highlight   = true
+radius            = 0
 
 # Flush full-width: the slab spans the entire top edge, no float, square corners
 margin_edge    = 0
 margin_ends    = 0
-widget_spacing = 12
+widget_spacing = 16
 padding        = 2
 thickness      = 38
 
@@ -107,6 +111,11 @@ tooltip = "Goodnight — screens + RGB off, session stays alive (any key wakes)"
 
 [widget.goodnight.actions]
 left = "exec /home/leo/.local/bin/goodnight toggle"
+
+# Wifi as icon only — no SSID text in the bar
+[widget.network]
+type       = "network"
+show_label = false
 
 # Bigger clock in the bar center (scale is the clock widget's size knob)
 [widget.clock]
