@@ -44,8 +44,10 @@ keybind = super+control+shift+alt+arrow_up=resize_split:up,100
 keybind = super+control+shift+alt+arrow_left=resize_split:left,100
 keybind = super+control+shift+alt+arrow_right=resize_split:right,100
 
-# Slowdown mouse scrolling
-mouse-scroll-multiplier = 0.95
+# Slightly slow precision (touchpad) scrolling, but keep discrete wheel ticks at
+# the 3-line default - a bare "0.95" overrides BOTH and made wheel scrolling
+# through TUIs like Claude Code crawl at ~1 line per tick.
+mouse-scroll-multiplier = precision:0.95,discrete:3
 
 # Fix general slowness on hyprland (https://github.com/ghostty-org/ghostty/discussions/3224)
 async-backend = epoll
