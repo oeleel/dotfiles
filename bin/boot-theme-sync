@@ -1,0 +1,56 @@
+#!/bin/bash
+# boot-theme-sync [theme-name] - sync boot splash, login screen, and boot menu
+# to an Omarchy theme (default: dynamic, the matugen wallpaper-driven theme).
+#
+# Covers the three pre-desktop surfaces the wall-theme pipeline does NOT touch,
+# because syncing them needs sudo + an initramfs rebuild (too heavy per
+# wallpaper change - run this manually when the rice shifts enough to care):
+#   1. Plymouth boot splash + SDDM login screen (omarchy plymouth set by theme)
+#   2. Limine boot menu palette (/boot/limine.conf theme keys)
+# Ends with limine-update, which re-enrolls the config BLAKE2B hash - mandatory
+# on this Secure Boot setup or the next boot panics on config hash mismatch.
+
+set -euo pipefail
+
+theme="${1:-dynamic}"
+theme_dir="$HOME/.config/omarchy/themes/$theme"
+
+if [[ ! -f "$theme_dir/colors.toml" ]]; then
+  echo "boot-theme-sync: no colors.toml in $theme_dir" >&2
+  exit 1
+fi
+
+# Pull the palette out of the theme's colors.toml (matugen writes all 16).
+tcolor() { awk -F'"' -v k="$1" '$0 ~ "^"k"[[:space:]]*=" {print $2; exit}' "$theme_dir/colors.toml"; }
+bg=$(tcolor background); fg=$(tcolor foreground); accent=$(tcolor accent)
+for var in bg fg accent; do
+  [[ -n "${!var}" ]] || { echo "boot-theme-sync: missing $var in colors.toml" >&2; exit 1; }
+done
+palette=$(for i in 0 1 2 3 4 5 6 7; do tcolor "color$i"; done | sed 's/#//' | paste -sd';')
+palette_bright=$(for i in 8 9 10 11 12 13 14 15; do tcolor "color$i"; done | sed 's/#//' | paste -sd';')
+
+sudo -v
+
+# 1. Plymouth splash + SDDM login (rebuilds initramfs, signs UKI, enrolls hash).
+omarchy-plymouth-set-by-theme "$theme"
+
+# 2. Limine menu palette. Only the cosmetic theme keys at the top of the conf -
+# the auto-generated boot entries (limine-entry-tool / snapper) stay untouched.
+sudo cp /boot/limine.conf "/boot/limine.conf.pre-$theme"
+sudo sed -i \
+  -e "s/^interface_branding_color: .*/interface_branding_color: ${accent#\#}/" \
+  -e "s/^interface_help_color: .*/interface_help_color: ${accent#\#}/" \
+  -e "s/^interface_help_color_bright: .*/interface_help_color_bright: ${accent#\#}/" \
+  -e "s/^term_background: .*/term_background: ${bg#\#}/" \
+  -e "s/^backdrop: .*/backdrop: ${bg#\#}/" \
+  -e "s/^term_foreground: .*/term_foreground: ${fg#\#}/" \
+  -e "s/^term_foreground_bright: .*/term_foreground_bright: ${fg#\#}/" \
+  -e "s/^term_palette: .*/term_palette: $palette/" \
+  -e "s/^term_palette_bright: .*/term_palette_bright: $palette_bright/" \
+  /boot/limine.conf
+
+# 3. Re-enroll the edited config's hash (see header - not optional).
+sudo limine-update
+
+echo "boot-theme-sync: splash + login + boot menu now match '$theme'."
+echo "Takes effect next boot. Rollback: /boot/limine.conf.pre-$theme + 'omarchy plymouth reset'."
