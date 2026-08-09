@@ -19,8 +19,28 @@ I'm building, and what's next. Loaded every session:
 @~/knowledge/next-actions.md
 
 Coding style loads contextually from `~/.claude/rules/` (symlinked from
-`~/knowledge/style/`). On-demand detail (per-project pages, notes) lives in
-`~/knowledge` and is read when relevant.
+`~/knowledge/style/`).
+
+### Looking things up - cheapest first, do not skip ahead to grep
+1. **Already loaded.** The four files above cover who I am, my preferences, the
+   project registry, and every open loop. Never search for what is already here.
+2. **Auto-memory** - settled per-project facts. kalshekki and parlee point their
+   `autoMemoryDirectory` at `~/knowledge/memory/<project>/`, indexed by `MEMORY.md`.
+   Decided verdicts live here.
+3. **Research index** - `~/knowledge/projects/_research/_index.md` lists every
+   investigation with its date, status, and a one-line verdict. Read the index,
+   then open at most one report. Never grep `_research/` blind; it is ~700 KB.
+4. **Project page** - `~/knowledge/projects/<name>.md` for current state.
+5. **The repo** - only for how the code actually works, and only after the above
+   came up empty.
+
+A report whose frontmatter says `superseded-by:` is history, not current truth.
+
+### Where new knowledge goes
+- A settled verdict -> a short auto-memory note pointing at the full evidence.
+- The evidence itself -> `~/knowledge/projects/_research/<id>.md`, with frontmatter.
+- A decision I made, and why -> `~/knowledge/decisions/`.
+- Never paste fast-changing state into `next-actions.md`; link it with an `as of` stamp.
 
 ## Git workflow (multi-device: Linux desktop + phone remote-control + MacBook)
 GitHub is the single source of truth. All three devices sync through it, so keep
