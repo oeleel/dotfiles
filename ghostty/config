@@ -25,14 +25,16 @@ shell-integration-features = no-cursor,ssh-env
 # Keyboard bindings
 keybind = shift+insert=paste_from_clipboard
 keybind = control+insert=copy_to_clipboard
-# Ctrl+V pastes. Wispr Flow injects dictated text by copying to the clipboard and
-# sending Ctrl+V; terminals ignore Ctrl+V by default, so this lets dictation land
-# in Ghostty (mirrors the same binding in alacritty.toml).
-keybind = ctrl+v=paste_from_clipboard
-# Ctrl+Alt+V sends a raw Ctrl+V byte through to the running app (instead of Ghostty
-# pasting), so TUIs like Claude Code receive Ctrl+V for their own paste — e.g.
-# pasting a clipboard image. Ctrl+V = paste text (dictation), Ctrl+Alt+V = app paste.
-keybind = ctrl+alt+v=text:\x16
+# Ctrl+V sends a raw Ctrl+V byte through to the running app, so Claude Code
+# receives Ctrl+V for its own clipboard paste (images AND text - so Wispr
+# dictation still lands in Claude Code, which reads the clipboard itself).
+# Tradeoff: dictation no longer auto-lands at a plain shell prompt / vim;
+# the text is on the clipboard - press Ctrl+Alt+V to paste it.
+# (Mirrors the same bindings in alacritty.toml.)
+keybind = ctrl+v=text:\x16
+# Ctrl+Alt+V = terminal-level paste (clipboard text). Manual fallback for
+# dictating into non-Claude contexts, and for plain text paste generally.
+keybind = ctrl+alt+v=paste_from_clipboard
 # Send Shift+Enter as CSI-u so TUIs can distinguish it from Enter.
 keybind = shift+enter=csi:13;2u
 # Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so tmux can match M-S-Enter.
