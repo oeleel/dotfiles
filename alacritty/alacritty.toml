@@ -21,18 +21,17 @@ decorations = "None"
 bindings = [
 { key = "Insert", mods = "Shift", action = "Paste" },
 { key = "Insert", mods = "Control", action = "Copy" },
-# Ctrl+V pastes. Wispr Flow injects transcribed text by copying it to the
-# clipboard and sending Ctrl+V (the GUI paste combo). Terminals normally
-# ignore Ctrl+V, so this binding lets dictation land in the terminal.
-# (Tradeoff: overrides readline's Ctrl+V "quoted-insert"; use Ctrl+Shift+V-free
-# paths if you need verbatim key entry.)
-{ key = "V", mods = "Control", action = "Paste" },
-# Ctrl+Alt+V sends a raw Ctrl+V byte (0x16) THROUGH to the running app instead of
-# Alacritty pasting. This lets Claude Code (and other TUIs) receive Ctrl+V for
-# their own paste — e.g. pasting an image from the clipboard — since plain Ctrl+V
-# above is consumed by Alacritty for Wispr dictation. So: Ctrl+V = paste text
-# (dictation), Ctrl+Alt+V = app-level paste (Claude Code image paste).
-{ key = "V", mods = "Control|Alt", chars = "\u0016" },
+# Ctrl+V sends a raw Ctrl+V byte (0x16) THROUGH to the running app instead of
+# Alacritty pasting, so Claude Code receives Ctrl+V for its own clipboard paste
+# (images AND text - verified: Claude Code inserts clipboard text on 0x16, so
+# Wispr dictation still lands in Claude Code through this path).
+# Tradeoff: dictation no longer auto-lands at a PLAIN shell prompt / vim, since
+# Wispr's injected Ctrl+V becomes readline quoted-insert there. The dictated
+# text is already on the clipboard - press Ctrl+Alt+V to paste it.
+{ key = "V", mods = "Control", chars = "\u0016" },
+# Ctrl+Alt+V = terminal-level paste (clipboard text). Manual fallback for
+# dictating into non-Claude contexts, and for plain text paste generally.
+{ key = "V", mods = "Control|Alt", action = "Paste" },
 # Send Shift+Return as CSI-u so TUIs can distinguish it from Return without treating it as Alt+Return.
 { key = "Return", mods = "Shift", chars = "\u001B[13;2u" },
 # Legacy encoding sends Alt+Shift+Return the same as Alt+Return; send CSI-u so tmux can match M-S-Enter.
