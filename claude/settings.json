@@ -79,5 +79,45 @@
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: assume private unless the remote host and repo name indicate otherwise, or a visibility check in the transcript shows public — the working directory (/home/leo) is a git repo with no remotes and no tracked files, so nothing here is published anywhere by default; the personal GitHub repos under the home directory (github.com/oeleel/*) were not visibility-checked and should be treated as private",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: not queryable via gh here (no origin remote to derive owner/repo); the user's own instructions treat `main`/`master` as protected — milestone-quality commits only, no force-push or history rewrite, and always ask before `git push`",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: None configured",
+      "**Source control**: The trusted repo and its remote(s) only (no additional orgs configured) — as scoped by the Trusted repo and Repository visibility entries above",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar. In this home directory specifically: `~/.claude/.credentials.json`, `~/.local/state/moshi/secrets.json`, `~/dev/kalshekki/.env.example`, `~/dev/parlee/.env.example`, and shell history files (`~/.bash_history`) are credential-bearing or personal and are not to be read out, pasted, or uploaded",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment (hyphen/underscore/dot-delimited — e.g. matches `prod-db`, not `producer`)",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development — in this checkout, predominantly Linux desktop configuration and tinkering (Hyprland/`hyprctl`, `noctalia`, `omarchy`, `openrgb`, `pacman`/`yay`, `systemctl`/`journalctl`, screenshot and image tooling)",
+      "**Trusted repo**: The git repository the agent started in (its working directory, /home/leo) and its configured remote(s) — there are currently no remotes and no tracked files, so there is no push destination to treat as trusted. When the repo's public/private visibility is given — by the Repository visibility entry or the user's own message — use it to scope what is OK to commit or push there: confidential material is fine in a private repo; in a public one, only that repo's own work is — and content ported, repointed, or first read from outside this session's repo is not its own work, whoever directed the port. Visibility scopes confidential material only: secrets and sensitive data (personal & entrusted) are never cleared into any repo by its visibility (see Definitions).",
+      "**Org-specific CLIs**: None configured — the frequently used non-standard CLIs here are personal desktop tools (`hyprctl`, `noctalia`, `omarchy`, `openrgb`, `pacman`, `yay`, `ghostty`, `grim`, `pactl`, `magick`), not org tooling",
+      "**Routine under user prefix**: local desktop/system inspection under /home/leo is routine (querying Hyprland state, listing packages, reading unit status and logs); package installs, unit installs, and anything touching credential files or remote hosts are not"
+    ],
+    "allow": [
+      "$defaults",
+      "Bash(hyprctl:*)",
+      "Bash(noctalia:*)",
+      "Bash(omarchy:*)",
+      "Bash(journalctl:*)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(pacman -R:*)",
+      "Bash(yay -R:*)"
+    ]
+  }
 }
