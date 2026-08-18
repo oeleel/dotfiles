@@ -1,0 +1,48 @@
+# Machine-level Omarchy shell tokens -> ~/.config/omarchy/shell.toml
+#
+# Read by the v4 Quickshell shell and merged OVER the active theme's
+# shell.toml, so these keys survive every theme switch and every wallpaper
+# retint (docs/omarchy-shell.md, "Theme tokens").
+#
+# DELIBERATELY COLORS-FREE. Colors must keep flowing from the wallpaper via
+# matugen -> themes/dynamic/colors.toml -> the generated shell.toml. Pinning a
+# color here would freeze that surface against the wallpaper and silently break
+# the single-seed pipeline. Only alpha and sizing belong in this file.
+#
+# Alphas are ported from the Noctalia bar this replaces, so the glass reads at
+# the same density as before:
+#   bar 0.78            <- noctalia [bar.default] background_opacity
+#   cards 0.82          <- a touch denser than the bar; card text sits over
+#                          busy wallpaper, the bar mostly sits over the top edge
+#   polkit/lock 0.88    <- auth surfaces stay legible under stress
+# Frost itself is compositor-side: see the `layerrule = blur` block in
+# hypr/hyprland.conf. Without those rules these alphas read as flat translucency.
+
+[bar]
+background-alpha = 0.78
+
+[popups]
+background-alpha = 0.82
+
+[tooltip]
+background-alpha = 0.82
+
+[notifications]
+background-alpha = 0.82
+
+[menu]
+background-alpha = 0.82
+
+[launcher]
+background-alpha = 0.82
+
+[polkit]
+background-alpha = 0.88
+
+[lock]
+background-alpha = 0.88
+
+# Control chrome (idle/hover/focus/selected fills and borders) is left at the
+# shipped defaults on purpose - they are close to the old capsule glow pill
+# (normal 0.04 / hover 0.08 / selected 0.18) and are better judged on screen
+# than guessed. Tune under [controls] if the hover pill reads too faint.
