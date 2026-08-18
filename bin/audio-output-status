@@ -1,0 +1,37 @@
+#!/bin/bash
+# Report which analog output port is live, as Waybar-style JSON.
+#
+# Why this exists: the Omarchy 4 bar's `type: command` modules poll a script and
+# render its stdout, so a swap button can show *which* device is active instead
+# of a fixed glyph. Under Noctalia the same control was a `custom_button` with a
+# static icon, which meant the bar never told you where the audio was going.
+#
+# Pairs with `audio-toggle-output`, which performs the swap. Both target the one
+# analog sink on this machine: the jacks share a sink, so we switch PORTS, not
+# sinks. Keep SINK in sync between the two scripts.
+set -euo pipefail
+
+readonly SINK="alsa_output.pci-0000_0e_00.6.analog-stereo"
+readonly PORT_HEADPHONES="analog-output-headphones"
+
+readonly GLYPH_HEADPHONES="󰋋"
+readonly GLYPH_SPEAKERS="󰓃"
+
+command -v pactl >/dev/null || { echo '{"text":"?","tooltip":"pactl not found","class":"error"}'; exit 0; }
+command -v jq    >/dev/null || { echo '{"text":"?","tooltip":"jq not found","class":"error"}'; exit 0; }
+
+# A missing sink is not fatal for a status poll - the bar should degrade to a
+# visible question mark rather than vanish or spam errors every interval.
+active_port=$(pactl -f json list sinks 2>/dev/null |
+  jq -r --arg n "$SINK" '.[] | select(.name == $n) | .active_port' 2>/dev/null) || active_port=""
+
+if [[ -z $active_port || $active_port == "null" ]]; then
+  printf '{"text":"%s","tooltip":"Analog sink not found: %s","class":"error"}\n' "$GLYPH_SPEAKERS" "$SINK"
+  exit 0
+fi
+
+if [[ $active_port == "$PORT_HEADPHONES" ]]; then
+  printf '{"text":"%s","tooltip":"Output: Earbuds (Headphones) - click to switch to Speakers","class":"headphones"}\n' "$GLYPH_HEADPHONES"
+else
+  printf '{"text":"%s","tooltip":"Output: Speakers (Line Out) - click to switch to Earbuds","class":"speakers"}\n' "$GLYPH_SPEAKERS"
+fi

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "transparent": true,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        { "id": "omarchy.menu" },
+        { "id": "omarchy.spacer", "size": 8 },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "omarchy.clock" }
+      ],
+      "right": [
+        { "id": "omarchy.audio" },
+        {
+          "id": "audio-swap",
+          "type": "command",
+          "exec": "/home/leo/.local/bin/audio-output-status",
+          "interval": 3,
+          "onClick": "/home/leo/.local/bin/audio-toggle-output",
+          "tooltip": "Toggle audio output: headphones / speakers"
+        },
+        { "id": "omarchy.tray" },
+        { "id": "omarchy.network" },
+        { "id": "omarchy.bluetooth" },
+        { "id": "omarchy.power" },
+        {
+          "id": "goodnight",
+          "type": "command",
+          "exec": "/home/leo/.local/bin/goodnight status",
+          "interval": 5,
+          "onClick": "/home/leo/.local/bin/goodnight toggle",
+          "tooltip": "Goodnight - screens + RGB off, session stays alive"
+        }
+      ]
+    }
+  }
+}
