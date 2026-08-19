@@ -43,10 +43,9 @@ local function place(win)
     return
   end
 
-  -- `pin` is a toggle, so only fire it when the bar is not already pinned.
-  if not win.pinned then
-    hl.dispatch(hl.dsp.window.pin({ window = selector(win) }))
-  end
+  -- `action = "on"` rather than the default toggle, so this stays idempotent
+  -- however many events fire for one window.
+  hl.dispatch(hl.dsp.window.pin({ window = selector(win), action = "on" }))
 
   -- A pixel move alone will not reassign the window to another monitor's
   -- workspace (it then renders on the wrong output), so hop workspaces first
