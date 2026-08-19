@@ -1,6 +1,26 @@
 -- Keep only your personal input overrides here. Uncommented settings below
 -- replace Omarchy's defaults.
 
+-- Pointer tuning for the Logitech MX Master 3 (this box has no touchpad).
+--
+-- accel_profile "flat" was set in the pre-quattro input.conf and was dropped by
+-- the omarchy-upgrade-to-quattro migration, which reverted it to libinput's
+-- adaptive curve. Flat means cursor travel is a pure linear function of how far
+-- the mouse physically moves -- the same swipe always lands in the same place,
+-- regardless of how fast you make it. Everything else the old input.conf set
+-- (repeat_rate, repeat_delay, numlock_by_default, compose:caps) is already
+-- supplied by Omarchy's own defaults, so it is deliberately not repeated here.
+--
+-- sensitivity is a libinput multiplier in [-1.0, 1.0]; 0 is untouched. Negative
+-- slows the pointer. Nudge in ~0.1 steps and reload -- with a flat profile this
+-- scales cursor travel uniformly, it does not reintroduce acceleration.
+hl.config({
+  input = {
+    accel_profile = "flat",
+    sensitivity = -0.3,
+  },
+})
+
 -- Keyboard layout and options.
 -- See https://wiki.hypr.land/Configuring/Basics/Variables/#input
 -- hl.config({

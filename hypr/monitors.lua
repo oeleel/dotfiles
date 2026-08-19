@@ -16,13 +16,12 @@ hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 -- Fallback for any panel not named below (e.g. a hotplugged display).
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
 
--- Physical layout: MSI on the left, KTC (primary) on the right, TOP edges
--- level (both at y = 0). Top-aligned rather than bottom-aligned so the two
--- 32px bars sit on one continuous line across the seam and the cursor keeps
--- its height crossing left-to-right along the top. The 360px dead zone
--- therefore sits along the bottom of the MSI.
+-- Physical layout: MSI on the left, KTC (primary) on the right, vertical
+-- midpoints level. The MSI's y offset is (1440 - 1080) / 2 = 180, which splits
+-- its 360px of unmatched height evenly into a 180px dead zone above and below
+-- rather than stacking all of it at one edge.
 -- Both panels are pinned to their highest available mode.
-hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@144", position = "0x0",    scale = 1 })  -- MSI G241, secondary
+hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@144", position = "0x180",  scale = 1 })  -- MSI G241, secondary
 hl.monitor({ output = "DP-3",     mode = "2560x1440@180", position = "1920x0", scale = 1 })  -- KTC H27T22S, primary
 
 -- Portrait/rotated secondary monitor (transform: 1 = 90°, 3 = 270°).
