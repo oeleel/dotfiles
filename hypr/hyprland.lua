@@ -66,5 +66,9 @@ o.window({ class = "^wispr-flow$", title = "^Status$" }, {
 -- The Hub is parked out of the way and pulled back with SUPER+U.
 o.window({ class = "^wispr-flow$", title = "^Hub$" }, { workspace = "special:wispr silent" })
 
+-- Static rules cannot place the Status bar (it is renamed after it maps), so a
+-- small event-driven module pins it bottom-centre instead.
+require("hypr.wispr-flow-position")
+
 -- Noctalia's layer rules are deliberately not restored -- it is retired per
 -- omarchy/QUATTRO-MIGRATION.md.

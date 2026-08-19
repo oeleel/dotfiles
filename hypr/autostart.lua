@@ -10,10 +10,9 @@
 -- covers clients that read the compositor rather than the environment.
 o.exec_on_start("hyprctl setcursor breeze_cursors 24")
 
--- Wispr Flow dictation. The positioner has to be listening BEFORE the app
--- starts: it watches for the floating Status bar and pins it, which cannot be
--- expressed as a static window rule.
-o.exec_on_start("~/.config/hypr/wispr-flow-position.sh")
+-- Wispr Flow dictation. Placement of its floating Status bar is handled by
+-- hypr/wispr-flow-position.lua, which is loaded from hyprland.lua and so is
+-- already listening before this launches.
 o.launch_on_start("wispr-flow")
 
 -- hyprshell (live-thumbnail Alt+Tab) is NOT started: 4.11.0-alpha.1 registers
