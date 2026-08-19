@@ -19,6 +19,12 @@
 # parser, so misc:* is set with `hyprctl eval`. Both were silent no-ops after
 # the upgrade, which made night mode cancel itself within ~10s.
 #
+# Same story for the screens (fixed 2026-08-19): `hyprctl dispatch` now parses
+# its argument as Lua, so `dispatch dpms off` is a syntax error, not a command.
+# Night mode left the monitors lit until this became `hl.dsp.dpms(...)`. Note
+# the field is `action`, not `state`: an unrecognised key silently falls back
+# to a TOGGLE, which is the one behaviour a scripted on/off must never get.
+#
 # RGB restore relies on an OpenRGB profile named "day" (save once in the
 # OpenRGB GUI: set lights how you like them → Profiles → Save → "day").
 # Without it, night still blacks the lights; morning just can't restore them.
@@ -100,7 +106,7 @@ night() {
           sleep "$UNLOCK_STANDDOWN"
           continue
         fi
-        hyprctl dispatch dpms off >/dev/null 2>&1
+        hyprctl dispatch 'hl.dsp.dpms({ action = "off" })' >/dev/null
         last_off=$SECONDS
       fi
       sleep "$DPMS_POLL"
@@ -123,7 +129,7 @@ day() {
   rm -f "$STATE_FILE"
   refresh_bar
   set_mouse_wake true
-  hyprctl dispatch dpms on >/dev/null
+  hyprctl dispatch 'hl.dsp.dpms({ action = "on" })' >/dev/null
   rgb_restore
   fans day
 }
