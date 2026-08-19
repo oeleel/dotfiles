@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# goodnight — bedtime toggle for the waybar moon button.
+# goodnight — bedtime toggle for the Omarchy bar moon button.
 #
 # Night mode turns the panels and RGB off but leaves the session fully alive:
 # nothing closes, Claude sessions keep running. Wake is a KEY PRESS only —
@@ -9,7 +9,15 @@
 #
 # Usage: goodnight [toggle|status]
 #   toggle (default) — flip night mode
-#   status           — emit waybar JSON for the custom/goodnight module
+#   status           — emit bar JSON for the omarchy.bar "goodnight" module
+#                      (waybar schema: text/tooltip/class; quattro's
+#                      CustomCommandModule parses the same shape)
+#
+# Quattro port (2026-08-18): hyprlock is gone — the lock is now a Quickshell
+# session-lock inside omarchy-shell, so lock state is polled over IPC instead
+# of with `pidof`. `hyprctl keyword` was also removed in favour of the Lua
+# parser, so misc:* is set with `hyprctl eval`. Both were silent no-ops after
+# the upgrade, which made night mode cancel itself within ~10s.
 #
 # RGB restore relies on an OpenRGB profile named "day" (save once in the
 # OpenRGB GUI: set lights how you like them → Profiles → Save → "day").
@@ -18,9 +26,17 @@
 STATE_FILE="$HOME/.local/state/goodnight.active"
 DAY_PROFILE="day"
 NIGHT_PROFILE="night"
-WAYBAR_SIGNAL=11
+# Quattro's bar has no refresh signal — the goodnight module re-runs `status`
+# on its own `interval`, so the icon catches up on the next poll.
+refresh_bar() { :; }
 
-refresh_waybar() { pkill -RTMIN+$WAYBAR_SIGNAL waybar; }
+# The lock is a Quickshell session-lock surface inside the shell process, not a
+# separate binary, so there is no pid to look for. Treat an unreachable shell as
+# "not locked" so a dead shell can never wedge a caller in a wait loop.
+is_locked() { [[ "$(omarchy-shell -q lock isLocked 2>/dev/null)" == "true" ]]; }
+
+# misc:* under quattro's Lua parser — `hyprctl keyword` errors out here.
+set_mouse_wake() { hyprctl eval "hl.config({ misc = { mouse_move_enables_dpms = $1 } })" >/dev/null; }
 
 rgb_off() {
   command -v openrgb >/dev/null || return 0
@@ -51,8 +67,8 @@ media_pause() { command -v playerctl >/dev/null && playerctl -a pause >/dev/null
 
 night() {
   touch "$STATE_FILE"
-  refresh_waybar
-  hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null
+  refresh_bar
+  set_mouse_wake false
   rgb_off
   media_pause
   fans night
@@ -71,14 +87,14 @@ night() {
   # Morning-unlock guard: input wakes a display faster than the ~10s app cadence,
   # so if a monitor lights up within one poll of our last blank, that's you
   # waking to type your password — stand down for $UNLOCK_STANDDOWN s instead of
-  # fighting your keystrokes. The loop ends the moment hyprlock exits (unlock) or
+  # fighting your keystrokes. The loop ends the moment the session unlocks or
   # the state file is cleared (manual day-toggle).
   DPMS_POLL=1
   UNLOCK_STANDDOWN=25
   (
-    for _ in $(seq 50); do pidof hyprlock >/dev/null && break; sleep 0.2; done
+    for _ in $(seq 50); do is_locked && break; sleep 0.2; done
     last_off=-100
-    while { [[ -f $STATE_FILE ]] && pidof hyprlock >/dev/null; }; do
+    while { [[ -f $STATE_FILE ]] && is_locked; }; do
       if hyprctl monitors -j | grep -q '"dpmsStatus": true'; then
         if (( SECONDS - last_off <= DPMS_POLL + 1 )); then
           sleep "$UNLOCK_STANDDOWN"
@@ -92,12 +108,12 @@ night() {
   ) >/dev/null 2>&1 &
   disown
 
-  # Auto-restore on unlock: wait for hyprlock to appear (lock is async), then
-  # for it to exit — that's the morning unlock. Guard on the state file so a
+  # Auto-restore on unlock: wait for the lock to come up (locking is async),
+  # then for it to clear — that's the morning unlock. Guard on the state file so a
   # manual day-toggle can't double-restore.
   (
-    for _ in $(seq 50); do pidof hyprlock >/dev/null && break; sleep 0.2; done
-    while pidof hyprlock >/dev/null; do sleep 2; done
+    for _ in $(seq 50); do is_locked && break; sleep 0.2; done
+    while is_locked; do sleep 2; done
     [[ -f $STATE_FILE ]] && "$0" day
   ) >/dev/null 2>&1 &
   disown
@@ -105,8 +121,8 @@ night() {
 
 day() {
   rm -f "$STATE_FILE"
-  refresh_waybar
-  hyprctl keyword misc:mouse_move_enables_dpms true >/dev/null
+  refresh_bar
+  set_mouse_wake true
   hyprctl dispatch dpms on >/dev/null
   rgb_restore
   fans day

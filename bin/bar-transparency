@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# bar-transparency — flip the Omarchy bar between glass and solid.
+#
+# There is no `omarchy toggle` flag for this: `omarchy toggle bar` only hides
+# the bar. Transparency is the `bar.transparent` key in shell.json, which the
+# shell watches and hot-reloads, so writing the file is the whole mechanism.
+#
+# Glass is TWO independent halves and this only controls one of them:
+#   alpha — `bar.transparent` here, plus [bar] background-alpha in shell.toml
+#   blur  — the `hl.layer_rule` block in hypr/hyprland.lua
+# With blur off, transparent just reads as flat washed-out colour.
+#
+# Usage: bar-transparency [toggle|on|off|status]
+
+set -euo pipefail
+
+CONFIG="$HOME/.config/omarchy/shell.json"
+[[ -f $CONFIG ]] || { echo "no shell.json at $CONFIG" >&2; exit 1; }
+
+current() { python3 -c "import json;print(json.load(open('$CONFIG'))['bar'].get('transparent',False))"; }
+
+apply() {
+  # Follow the symlink so dotfiles stays the real file rather than being
+  # replaced by a regular file on write.
+  python3 - "$1" <<'PY'
+import json, os, sys
+path = os.path.realpath(os.path.expanduser("~/.config/omarchy/shell.json"))
+cfg = json.load(open(path))
+cfg["bar"]["transparent"] = sys.argv[1] == "true"
+open(path, "w").write(json.dumps(cfg, indent=2) + "\n")
+PY
+}
+
+case "${1:-toggle}" in
+toggle) [[ $(current) == True ]] && apply false || apply true ;;
+on)     apply true ;;
+off)    apply false ;;
+status) [[ $(current) == True ]] && echo transparent || echo solid ;;
+*)      echo "usage: bar-transparency [toggle|on|off|status]" >&2; exit 1 ;;
+esac
