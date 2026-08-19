@@ -8,8 +8,8 @@
 
 -- GTK apps render at 1x. Omarchy's stock template ships 2, which doubles GTK
 -- chrome on these scale-1 panels; this machine deliberately ran 1 pre-quattro.
-local omarchy_gdk_scale = 1
-local omarchy_monitor_scale = "auto"
+local omarchy_gdk_scale = 2
+local omarchy_monitor_scale = 1.6
 
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 

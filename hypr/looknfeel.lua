@@ -1,50 +1,38 @@
--- Change the default Omarchy look'n'feel.
-
--- https://wiki.hypr.land/Configuring/Basics/Variables/#general
--- hl.config({
---   general = {
---     -- No gaps between windows or borders.
---     gaps_in = 0,
---     gaps_out = 0,
---     border_size = 0,
+-- Appearance overrides.
 --
---     -- Change to niri-like side-scrolling layout.
---     layout = "scrolling",
---   },
--- })
+-- Restored 2026-08-18 from the pre-quattro looknfeel.conf, discarded by the
+-- omarchy-upgrade-to-quattro migration. Without it the desktop came back with
+-- Omarchy's stock 5/10 gaps, square corners and blur OFF -- i.e. none of the
+-- glass look, which is the compositor half of the effect whose alpha half
+-- lives in omarchy/shell.toml. Both halves are required.
 
--- https://wiki.hypr.land/Configuring/Basics/Variables/#decoration
--- hl.config({
---   decoration = {
---     -- Use round window corners.
---     rounding = 8,
---
---     -- Dim unfocused windows (0.0 = no dim, 1.0 = fully dimmed).
---     dim_inactive = true,
---     dim_strength = 0.15,
---   },
--- })
+hl.config({
+  general = {
+    gaps_in = 3,
+    gaps_out = 6,
+  },
 
--- https://wiki.hypr.land/Configuring/Basics/Variables/#animations
--- hl.config({
---   animations = {
---     -- Disable all animations.
---     enabled = false,
---   },
--- })
+  decoration = {
+    rounding = 8,
 
--- https://wiki.hypr.land/Configuring/Basics/Variables/#layout
--- hl.config({
---   layout = {
---     -- Avoid overly wide single-window layouts on wide screens.
---     single_window_aspect_ratio = { 1, 1 },
---   },
--- })
+    -- Fewer, wider passes than stock: this is what frosts the bar and the
+    -- shell popouts, via the layer_rule blur block in hyprland.lua.
+    blur = {
+      enabled = true,
+      size = 4,
+      passes = 3,
+    },
+  },
+})
 
--- https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/
--- hl.config({
---   scrolling = {
---     -- See only one column per screen instead of two.
---     column_width = 0.97,
---   },
--- })
+-- Snappier, longer-tailed window motion than stock easeOutQuint.
+hl.curve("easeOutExpo", { type = "bezier", points = { { 0.16, 1 }, { 0.3, 1 } } })
+hl.animation({ leaf = "windows",    enabled = true, speed = 3.8, bezier = "easeOutExpo" })
+hl.animation({ leaf = "windowsIn",  enabled = true, speed = 4,   bezier = "easeOutExpo", style = "popin 90%" })
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.8, bezier = "linear",      style = "popin 92%" })
+hl.animation({ leaf = "border",     enabled = true, speed = 5,   bezier = "easeOutExpo" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 4.5, bezier = "easeOutExpo", style = "slide" })
+
+-- Terminals sit further back than everything else.
+o.window({ class = "^(Alacritty|dropdown-terminal)$" }, { opacity = "0.84 0.78" })
+o.window({ tag = "default-opacity" }, { opacity = "0.92 0.88" })
