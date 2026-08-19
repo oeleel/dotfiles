@@ -8,8 +8,15 @@
 
 -- GTK apps render at 1x. Omarchy's stock template ships 2, which doubles GTK
 -- chrome on these scale-1 panels; this machine deliberately ran 1 pre-quattro.
-local omarchy_gdk_scale = 2
-local omarchy_monitor_scale = 1.6
+--
+-- CAUTION: `omarchy-hyprland-monitor-scaling` REWRITES both values below. It is
+-- what the bar's Display widget calls, and it derives gdk_scale from the monitor
+-- scale, so one click there silently doubles every GTK/Electron app (Spotify,
+-- 2026-08-19). The explicit per-monitor rules further down pin scale = 1, which
+-- masks the change on screen -- oversized app chrome is the only symptom.
+-- Audit trail: ~/.local/state/omarchy/monitor-scaling.log
+local omarchy_gdk_scale = 1
+local omarchy_monitor_scale = 1
 
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 
