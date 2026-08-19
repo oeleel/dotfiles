@@ -29,13 +29,4 @@ cp -f "$WALL" "$DYN/backgrounds/$(basename "$WALL")"
 OMARCHY_THEME_SKIP_BACKGROUND=1 omarchy-theme-set dynamic
 omarchy-theme-bg-set "$WALL"
 
-# 4) Noctalia: same wallpaper (its layer sits on top and owns the transition
-#    animation) and the matugen-generated palette, so bar/dock/panels retint
-#    from the exact same seed. Re-selecting the scheme forces a palette reload
-#    even when "dynamic" is already active.
-if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then
-  noctalia msg wallpaper-set "$WALL" >/dev/null 2>&1 || true
-  noctalia msg color-scheme-set custom dynamic >/dev/null 2>&1 || true
-fi
-
 notify-send "🎨 Theme synced to wallpaper" "$(basename "$WALL")" -t 2000 || true

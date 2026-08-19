@@ -3,10 +3,3 @@
 [templates.omarchy]
 input_path  = "~/.config/matugen/templates/omarchy-colors.toml"
 output_path = "~/.config/omarchy/themes/dynamic/colors.toml"
-
-# Noctalia custom palette (bar/dock/panels) from the same seed, so the shell
-# matches the omarchy dynamic theme exactly. Applied by wall-theme via
-# `noctalia msg color-scheme-set custom dynamic`.
-[templates.noctalia]
-input_path  = "~/.config/matugen/templates/noctalia-palette.json"
-output_path = "~/.config/noctalia/palettes/dynamic.json"

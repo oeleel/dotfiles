@@ -1,0 +1,67 @@
+# Machine-level Omarchy shell tokens -> ~/.config/omarchy/shell.toml
+#
+# Read by the v4 Quickshell shell and merged OVER the active theme's
+# shell.toml, so these keys survive every theme switch and every wallpaper
+# retint (docs/omarchy-shell.md, "Theme tokens").
+#
+# DELIBERATELY COLORS-FREE. Colors must keep flowing from the wallpaper via
+# matugen -> themes/dynamic/colors.toml -> the generated shell.toml. Pinning a
+# color here would freeze that surface against the wallpaper and silently break
+# the single-seed pipeline. Only alpha and sizing belong in this file.
+#
+# Alphas are ported from the Noctalia bar this replaces, so the glass reads at
+# the same density as before:
+#   bar 0.78            <- noctalia [bar.default] background_opacity
+#   cards 0.82          <- a touch denser than the bar; card text sits over
+#                          busy wallpaper, the bar mostly sits over the top edge
+#   polkit/lock 0.88    <- auth surfaces stay legible under stress
+# Frost itself is compositor-side: see the `layerrule = blur` block in
+# hypr/hyprland.conf. Without those rules these alphas read as flat translucency.
+
+[bar]
+background-alpha = 0.78
+# Cross-axis size at font base-size 12; scales with [font] base-size. Stock is
+# 26. Raised because DP-3 (2560x1440 @ 27", ~109 PPI) renders the stock bar
+# noticeably shorter than HDMI-A-1 (1920x1080 @ 24", ~92 PPI). Bar height is a
+# global singleton token (Style.qml), so both bars take this value.
+size-horizontal = 32
+
+[popups]
+background-alpha = 0.82
+
+[tooltip]
+background-alpha = 0.82
+
+[notifications]
+background-alpha = 0.82
+
+[menu]
+background-alpha = 0.82
+
+[launcher]
+background-alpha = 0.82
+
+[polkit]
+background-alpha = 0.88
+
+[lock]
+background-alpha = 0.88
+
+# Control chrome (idle/hover/focus/selected fills and borders) is left at the
+# shipped defaults on purpose - they are close to the old capsule glow pill
+# (normal 0.04 / hover 0.08 / selected 0.18) and are better judged on screen
+# than guessed. Tune under [controls] if the hover pill reads too faint.
+
+[font]
+# base-size is the rem root for the whole shell type scale: bar text, menus,
+# panels, popups. Stock is 12.
+#
+# Raised for legibility on DP-3. With [bar] scale-with-font = true this also
+# multiplies every [bar] token, so bar height and icon glyphs grow in step
+# rather than needing separate tuning -- icons are Style.bar.iconFont, bar text
+# is Style.font.body, and only this key moves both.
+#
+# This is deliberately NOT `omarchy display text size`, which drives GTK's
+# text-scaling-factor and the terminal point size in lockstep with it. Those
+# are already sized how they should be; only the shell needed to grow.
+base-size = 14
