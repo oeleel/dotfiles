@@ -20,8 +20,18 @@ branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
 [ -z "$upstream" ] && exit 0        # no tracking branch; nothing to sync
 
+# Portable timeout: GNU `timeout` on Linux, `gtimeout` if coreutils is
+# installed, else perl's alarm (ships with macOS, which has no `timeout`).
+run_bounded() {
+  local secs="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@"
+  else perl -e 'alarm shift; exec @ARGV or exit 127' "$secs" "$@"
+  fi
+}
+
 # Fetch (bounded so a network hiccup can't hang the session start).
-timeout 20 git fetch --quiet 2>/dev/null || { echo "[sync] fetch failed/offline — skipping"; exit 0; }
+run_bounded 20 git fetch --quiet 2>/dev/null || { echo "[sync] fetch failed/offline - skipping"; exit 0; }
 
 behind="$(git rev-list --count HEAD..@{u} 2>/dev/null || echo 0)"
 ahead="$(git rev-list --count @{u}..HEAD 2>/dev/null || echo 0)"
@@ -31,8 +41,8 @@ if [ "$behind" = "0" ]; then
   exit 0
 fi
 
-echo "[sync] $(basename "$root") is ${behind} behind ${upstream} — rebasing…"
-if timeout 30 git pull --rebase --autostash --quiet 2>/dev/null; then
+echo "[sync] $(basename "$root") is ${behind} behind ${upstream} - rebasing..."
+if run_bounded 30 git pull --rebase --autostash --quiet 2>/dev/null; then
   echo "[sync] up to date with ${upstream}"
 else
   git rebase --abort >/dev/null 2>&1 || true
