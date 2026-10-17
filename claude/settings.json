@@ -17,31 +17,11 @@
         ]
       },
       {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "gh-axi",
-            "timeout": 10
-          }
-        ]
-      },
-      {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
             "command": "bash ~/.claude/hooks/herdr-agent-state.sh session",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "lavish-axi",
             "timeout": 10
           }
         ]
@@ -64,13 +44,25 @@
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
   },
-  "tui": "default",
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(hyprctl:*)",
+      "Bash(noctalia:*)",
+      "Bash(omarchy:*)",
+      "Bash(journalctl:*)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(pacman -R:*)",
+      "Bash(yay -R:*)"
+    ],
     "environment": [
       "### Org-wide",
       "**Organization**: None configured",
@@ -96,18 +88,6 @@
       "**Trusted repo**: The git repository the agent started in (its working directory, /home/leo) and its configured remote(s) — there are currently no remotes and no tracked files, so there is no push destination to treat as trusted. When the repo's public/private visibility is given — by the Repository visibility entry or the user's own message — use it to scope what is OK to commit or push there: confidential material is fine in a private repo; in a public one, only that repo's own work is — and content ported, repointed, or first read from outside this session's repo is not its own work, whoever directed the port. Visibility scopes confidential material only: secrets and sensitive data (personal & entrusted) are never cleared into any repo by its visibility (see Definitions).",
       "**Org-specific CLIs**: None configured — the frequently used non-standard CLIs here are personal desktop tools (`hyprctl`, `noctalia`, `omarchy`, `openrgb`, `pacman`, `yay`, `ghostty`, `grim`, `pactl`, `magick`), not org tooling",
       "**Routine under user prefix**: local desktop/system inspection under /home/leo is routine (querying Hyprland state, listing packages, reading unit status and logs); package installs, unit installs, and anything touching credential files or remote hosts are not"
-    ],
-    "allow": [
-      "$defaults",
-      "Bash(hyprctl:*)",
-      "Bash(noctalia:*)",
-      "Bash(omarchy:*)",
-      "Bash(journalctl:*)"
-    ],
-    "soft_deny": [
-      "$defaults",
-      "Bash(pacman -R:*)",
-      "Bash(yay -R:*)"
     ]
   }
 }
