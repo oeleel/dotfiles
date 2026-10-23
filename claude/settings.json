@@ -1,11 +1,11 @@
 {
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "Bash(gh pr merge:*)"
-    ]
+    ],
+    "defaultMode": "auto"
   },
-  "model": "opus",
+  "model": "fable",
   "hooks": {
     "SessionStart": [
       {
