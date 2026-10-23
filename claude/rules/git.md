@@ -33,6 +33,9 @@ Examples from Leo's history:
 
 - A SessionStart hook rebases onto origin. Before substantial work, run `git fetch` if the
   repo has not been synced this session. If a rebase conflicts, stop and report it.
-- Always ask before `git push`, unless Leo has said "push when done". Direct pushes to
-  `main` are allowed with approval.
+- Pushing the current feature branch needs no approval: the push is the device handoff,
+  and work that stays on one machine is lost to the other. Ask before any push to `main`,
+  unless Leo has said "push when done". Direct pushes to `main` are allowed with approval.
+- Leaving a repo for the day or for another device: run `/handoff` (commit, one status
+  line, push).
 - Push only from a working state. A pushed branch must be usable from another device.

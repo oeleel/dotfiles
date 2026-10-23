@@ -17,12 +17,23 @@ demand; only `CLAUDE.md`, `preferences.md` and `rules/git.md` load every session
 ln -sfn ~/dotfiles/claude/CLAUDE.md   ~/.claude/CLAUDE.md
 ln -sfn ~/dotfiles/claude/rules       ~/.claude/rules
 ln -sfn ~/dotfiles/claude/hooks       ~/.claude/hooks    # then register them: hooks/README.md
+mkdir -p ~/.claude/skills && ln -sfn ~/dotfiles/claude/skills/handoff ~/.claude/skills/handoff
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
 ```
 
 Remote is HTTPS through `gh` auth; SSH keys are not required.
+
+## Device handoff
+
+Leaving a repo for another device: run `/handoff` in it (commits, writes one line to
+`docs/STATUS.md`, pushes the branch). Arriving: open the repo; the SessionStart hook pulls.
+Pushing a feature branch needs no approval (`rules/git.md`).
+
+Pending on the desktop (as of 2026-10-23): move personal repos from `~/dev/` to `~/repos/`
+and leave `~/dev` as a symlink, so paths match the MacBook; then drop the `~/dev/` mention
+from `CLAUDE.md` and this file, and fix `~/dev/...` links in each repo's `docs/STATUS.md`.
 
 ## One-time migration off ~/knowledge (devices set up before 2026-10-21)
 
