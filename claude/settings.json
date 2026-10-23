@@ -6,7 +6,23 @@
     "defaultMode": "auto"
   },
   "model": "fable",
+  "env": {
+    "CLAUDE_CODE_DISABLE_FAST_MODE": "1"
+  },
+  "switchModelsOnFlag": false,
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/format-python.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup|resume",

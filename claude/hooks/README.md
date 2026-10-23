@@ -32,3 +32,19 @@ ln -s ~/dotfiles/claude/hooks ~/.claude/hooks   # if not already linked
 ```
 
 Then open `/hooks` once (or restart) so Claude Code reloads the config.
+
+## Python project hooks (added 2026-10-23, from the golf-coach agent playbook)
+
+- **`format-python.sh`** - `PostToolUse` on `Edit|Write`, registered globally. Runs the
+  project's `ruff format` and `ruff check --fix` on the edited `.py` file, silently. No-op
+  outside a uv project.
+- **`stop-gate.sh`** - `Stop` hook, registered **per project** in `.claude/settings.json`.
+  ruff check, ruff format --check, mypy (if configured), `pytest -m "not slow"`; blocks the
+  stop with the failing output. Also flags uncommitted test edits that remove assertions, add
+  skips, or touch tolerances. Bails out on `stop_hook_active`, so it fires once per stop.
+- **`enforce-uv.sh`** - `PreToolUse` on `Bash`, registered per project. Blocks bare `pip`,
+  `python`, `pytest`, `ruff`, `mypy` and prints the `uv run` form.
+
+Stop hooks run concurrently, so `checkpoint-commit.sh` may autosave a red tree on the first
+stop; the gate then makes the agent fix it and the next stop autosaves the fix. Checkpoints
+are squashed before `main`, so this is harmless.
