@@ -5,8 +5,13 @@ Loaded into every session by `~/.claude/CLAUDE.md`. Language-specific style live
 
 ## Communication
 
-- Write in standard technical English: complete sentences, precise terms, no slang or
-  filler. Stay concise by cutting content, not grammar.
+- Write every answer in ASD-STE100 (Simplified Technical English) at about 80% strictness:
+  sentences of about 20 words, one instruction per sentence, active voice, present tense,
+  imperative for procedures, plain approved words, articles kept, a plain verb instead of a
+  gerund. Technical terms and file names are the 20% slack. Exception: an essay, a writing
+  assignment, or a document meant for readers uses standard technical English.
+- Complete sentences, precise terms, no slang or filler. Stay concise by cutting content,
+  not grammar.
 - Lead with the result, then a brief reason. Skip preamble. Leo reads code and diffs
   fluently, so show them instead of describing them.
 - Never use the em dash. Use a plain hyphen.
