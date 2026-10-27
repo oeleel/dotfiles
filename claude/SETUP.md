@@ -18,6 +18,7 @@ ln -sfn ~/dotfiles/claude/CLAUDE.md   ~/.claude/CLAUDE.md
 ln -sfn ~/dotfiles/claude/rules       ~/.claude/rules
 ln -sfn ~/dotfiles/claude/hooks       ~/.claude/hooks    # then register them: hooks/README.md
 mkdir -p ~/.claude/skills && ln -sfn ~/dotfiles/claude/skills/handoff ~/.claude/skills/handoff
+ln -sfn ~/dotfiles/claude/skills/herdr ~/.claude/skills/herdr
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
