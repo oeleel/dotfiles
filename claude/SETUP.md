@@ -35,28 +35,7 @@ Pushing a feature branch needs no approval (`rules/git.md`).
 Both devices use the same layout: personal repos in `~/repos/`, n2o work in `~/N2O/` (one
 folder per repo, one `<repo>-<topic>` sibling per git worktree).
 
-## One-time migration off ~/knowledge (devices set up before 2026-10-21)
-
-`~/knowledge` (`oeleel/knowledge`) is retired and archived; its README maps every old path
-to its new home. On each older device (personal repos are in `~/repos/`):
-
-1. `git -C ~/dotfiles pull` (the SessionStart hook usually has already).
-2. Rules: if `~/.claude/rules` is a real directory of symlinks into `~/knowledge/style/`,
-   remove it, then `ln -sfn ~/dotfiles/claude/rules ~/.claude/rules`.
-3. Skills: remove `~/.claude/skills/knowledge` and `~/.claude/skills/apply` if present
-   (`/apply` now lives in `~/jobapp/.claude/skills/apply`, available in jobapp sessions).
-4. Auto-memory: delete the `autoMemoryDirectory` line from
-   `~/repos/parlee/.claude/settings.local.json` and `~/repos/kalshekki/.claude/settings.local.json`
-   (delete the file if that was its only key). Their verdicts are now `docs/verdicts.md`.
-5. Pull the project repos so they have the new `docs/`: `git -C ~/repos/parlee pull`,
-   `~/repos/kalshekki`, `~/repos/golf-coach`.
-6. Clone the three private repos from the table above if missing.
-7. If `~/repos/` holds an old N2O workflow template (a parent `CLAUDE.md`
-   asking to "scan the codebase", `.claude/skills/`, `.pm/`, `scripts/`), move it to the
-   trash: it loads into every child repo's sessions.
-8. Delete `~/knowledge`.
-9. Check: start a session anywhere and run `/memory`; the loaded files should be this
-   repo's `CLAUDE.md`, `preferences.md` and `rules/git.md`, with nothing from `~/knowledge`.
+## Open items
 
 Still open as of 2026-10-21: epiForecasting branch `docs/agents-md` (lean `AGENTS.md` +
 `documentation/STATUS.md`) merges after `feature/weekly-hindcast`; then fix the

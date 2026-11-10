@@ -9,7 +9,7 @@ These scripts implement the multi-device git workflow (see `../CLAUDE.md`).
   so you never build on stale code. Never pushes. Opt out with `.no-auto-sync`.
 
 ## Activate on a new machine
-Full device setup (links, private repos, the ~/knowledge migration): `../SETUP.md`.
+Full device setup (links, private repos): `../SETUP.md`.
 
 The scripts sync automatically, but each machine's `~/.claude/settings.json` must
 register them (settings.json is machine-local — it isn't symlinked). Symlink this
