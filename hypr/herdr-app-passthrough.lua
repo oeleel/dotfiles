@@ -13,7 +13,7 @@
 -- MUST load before `require("default.hypr.omarchy")`: only binds that register
 -- after this module are wrapped.
 --
--- Chords in keys.json that Hyprland does not bind (SUPER+W, SUPER+D, SUPER+B,
+-- Chords in keys.json that Hyprland does not bind (SUPER+D, SUPER+B,
 -- SUPER+N, CTRL+1..9, ...) reach Herdr without help and are not listed.
 
 local HERDR_WINDOW_CLASS = "herdr-app"
@@ -27,6 +27,7 @@ local KEY_RELEASE_DELAY_MS = 50
 -- 10..19 = digits 1..0, 20 = minus, 21 = equal, 34/35 = left/right bracket.
 local PASSTHROUGH_CHORDS = {
   "SUPER + T", -- tab.new            (Hyprland: toggle floating)
+  "SUPER + W", -- tab.close          (close tab: sends CTRL+W)
   "SUPER + P", -- picker             (pseudo window)
   "SUPER + F", -- terminal.search    (full screen)
   "SUPER + C", -- terminal.copy      (universal copy, would send CTRL+C)

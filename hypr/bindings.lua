@@ -22,10 +22,38 @@ o.bind(
 o.bind("SUPER + A", "Toggle audio output", "audio-toggle-output")
 
 -- Close the window with SUPER+Q, the same chord as Cmd+Q on the MacBook. The
--- Omarchy default is SUPER+W; that chord is released here so apps receive it
--- (the Herdr app closes a tab with it, as Cmd+W does on macOS).
+-- Omarchy default for that action is SUPER+W, which is taken over below.
 hl.unbind("SUPER + W")
 o.bind("SUPER + Q", "Close window", hl.dsp.window.close())
+
+-- SUPER+W closes a tab, as Cmd+W does on macOS. Apps here expect CTRL+W for
+-- that, so the chord is translated. Terminals are the exception: CTRL+W deletes
+-- a word in a shell, and Ghostty closes a tab with CTRL+SHIFT+W. The Herdr app
+-- takes SUPER+W itself; hypr/herdr-app-passthrough.lua handles that case.
+-- The down/up split and its delay follow Omarchy's clipboard binds, because
+-- send_shortcut can leave a key stuck (hyprwm/Hyprland discussion 14099).
+local CLOSE_TAB_KEY_RELEASE_DELAY_MS = 50
+
+local function active_window_is_terminal()
+  local window = hl.get_active_window()
+  if not window then
+    return false
+  end
+  for _, tag in ipairs(window.tags or {}) do
+    if tag:gsub("%*$", "") == "terminal" then
+      return true
+    end
+  end
+  return false
+end
+
+o.bind("SUPER + W", "Close tab", function()
+  local mods = active_window_is_terminal() and "CTRL SHIFT" or "CTRL"
+  hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "W", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "W", state = "up" }))
+  end, { timeout = CLOSE_TAB_KEY_RELEASE_DELAY_MS, type = "oneshot" })
+end)
 
 -- Wispr Flow dictation. The Hub window is parked on a special workspace by a
 -- rule in hyprland.lua; this is what pulls it back into view. Push-to-talk is
