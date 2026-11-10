@@ -1,7 +1,8 @@
 -- Let the Herdr app keep its macOS shortcuts on this desktop.
 --
--- herdr-app/keys.json is the macOS keymap, verbatim, and `cmd` is SUPER on
--- Linux. Hyprland owns many SUPER chords and consumes them before any client
+-- herdr-app/keys.json is the macOS keymap plus ALT+1..9 for tabs, and `cmd` is
+-- SUPER on Linux. Only this desktop links the file; the MacBook uses Herdr's
+-- built-in macOS defaults. Hyprland owns many SUPER chords and consumes them before any client
 -- sees them, so the chords below would never reach Herdr.
 --
 -- Hyprland has no per-window binds. This module wraps `hl.bind` instead: a bind
@@ -17,8 +18,9 @@
 -- SUPER+N, CTRL+1..9, ...) reach Herdr without help and are not listed.
 --
 -- SUPER+1..9 is left out on purpose: it switches workspaces everywhere, also
--- in Herdr. The tab.select:1..9 entries in keys.json are thus dead on Linux;
--- CTRL+TAB and SUPER+SHIFT+[ / ] still move between Herdr tabs.
+-- in Herdr. The cmd-1..9 tab.select entries in keys.json are thus dead on
+-- Linux; ALT+1..9 selects a Herdr tab by number instead, and CTRL+TAB and
+-- SUPER+SHIFT+[ / ] still step between tabs.
 
 local HERDR_WINDOW_CLASS = "herdr-app"
 
