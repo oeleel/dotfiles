@@ -21,6 +21,12 @@ o.bind(
 -- `audio-swap` bar module, which renders whichever port is currently live.
 o.bind("SUPER + A", "Toggle audio output", "audio-toggle-output")
 
+-- Close the window with SUPER+Q, the same chord as Cmd+Q on the MacBook. The
+-- Omarchy default is SUPER+W; that chord is released here so apps receive it
+-- (the Herdr app closes a tab with it, as Cmd+W does on macOS).
+hl.unbind("SUPER + W")
+o.bind("SUPER + Q", "Close window", hl.dsp.window.close())
+
 -- Wispr Flow dictation. The Hub window is parked on a special workspace by a
 -- rule in hyprland.lua; this is what pulls it back into view. Push-to-talk is
 -- separate -- CapsLock is remapped to F13 by keyd, below Hyprland.
@@ -100,3 +106,22 @@ end)
 -- Deliberately NOT restored:
 --   SUPER + S      -- was `pypr toggle term`; quattro ships its own scratchpad
 --   SUPER + GRAVE  -- was Noctalia's window finder; Noctalia is retired
+
+-- Monitor-local workspace cycling, driven by the MX Master 3 thumb gestures
+-- (see /etc/logid.cfg). Hyprland's `m+1`/`m-1` selectors walk only workspaces
+-- that live on the *focused* monitor, so with ws1 on the KTC and ws2/4/5 on the
+-- MSI, cycling on the KTC moves between the KTC's own workspaces instead of
+-- jumping across to the MSI's ws2. `follow_mouse = 1` (Omarchy default) makes
+-- the hovered monitor the focused one, which is what turns this into
+-- "swipe on a screen, cycle that screen".
+--
+-- Kept SEPARATE from SUPER+TAB rather than replacing it: Omarchy binds that to
+-- `e+1`, which spans every monitor and includes empty workspaces. Roaming and
+-- staying put are genuinely different actions, so they get different keys.
+-- Bound to a real chord (not a throwaway keycode) so the behaviour is reachable
+-- from the keyboard too, not only from the mouse.
+--
+-- CAVEAT: `m+-1` only visits workspaces that already exist on that monitor. On
+-- a monitor holding a single workspace it is a no-op; it will not create one.
+o.bind("SUPER + CTRL + SHIFT + RIGHT", "Next workspace on this monitor", hl.dsp.focus({ workspace = "m+1" }))
+o.bind("SUPER + CTRL + SHIFT + LEFT", "Previous workspace on this monitor", hl.dsp.focus({ workspace = "m-1" }))

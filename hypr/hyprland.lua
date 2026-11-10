@@ -10,6 +10,10 @@ dofile((os.getenv("OMARCHY_PATH") or "/usr/share/omarchy") .. "/default/hypr/boo
 -- keeping core window-manager bindings:
 -- omarchy_preinstalled_bindings = false
 
+-- Wraps hl.bind so listed SUPER chords reach the Herdr app when it has focus.
+-- Must come before the defaults: it only sees binds registered after it.
+require("hypr.herdr-app-passthrough")
+
 -- Load Omarchy defaults.
 require("default.hypr.omarchy")
 
