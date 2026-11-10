@@ -15,6 +15,10 @@
 --
 -- Chords in keys.json that Hyprland does not bind (SUPER+D, SUPER+B,
 -- SUPER+N, CTRL+1..9, ...) reach Herdr without help and are not listed.
+--
+-- SUPER+1..9 is left out on purpose: it switches workspaces everywhere, also
+-- in Herdr. The tab.select:1..9 entries in keys.json are thus dead on Linux;
+-- CTRL+TAB and SUPER+SHIFT+[ / ] still move between Herdr tabs.
 
 local HERDR_WINDOW_CLASS = "herdr-app"
 
@@ -24,7 +28,7 @@ local HERDR_WINDOW_CLASS = "herdr-app"
 local KEY_RELEASE_DELAY_MS = 50
 
 -- Written exactly as Omarchy writes them. `code:N` is a keycode bind:
--- 10..19 = digits 1..0, 20 = minus, 21 = equal, 34/35 = left/right bracket.
+-- 19 = digit 0, 20 = minus, 21 = equal, 34/35 = left/right bracket.
 local PASSTHROUGH_CHORDS = {
   "SUPER + T", -- tab.new            (Hyprland: new tab, sends CTRL+T)
   "SUPER + W", -- tab.close          (close tab: sends CTRL+W)
@@ -37,15 +41,6 @@ local PASSTHROUGH_CHORDS = {
   "SUPER + LEFT", -- line start      (focus left window)
   "SUPER + RIGHT", -- line end       (focus right window)
   "SUPER + BACKSPACE", -- delete to line start
-  "SUPER + code:10", -- tab.select:1..9 (switch to workspace 1..9)
-  "SUPER + code:11",
-  "SUPER + code:12",
-  "SUPER + code:13",
-  "SUPER + code:14",
-  "SUPER + code:15",
-  "SUPER + code:16",
-  "SUPER + code:17",
-  "SUPER + code:18",
   "SUPER + code:19", -- app.zoom_reset (switch to workspace 10)
   "SUPER + code:20", -- app.zoom_out   (resize window)
   "SUPER + code:21", -- app.zoom_in    (resize window)
