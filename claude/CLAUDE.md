@@ -21,8 +21,8 @@ load from `~/.claude/rules/`, which links to `~/dotfiles/claude/rules/`.
 Information lives with the thing it is about. Look it up when a task needs it; none of it
 is loaded up front.
 - A project's state, decisions, and research: that repo's `AGENTS.md` and `docs/`
-  (`documentation/` in epiForecasting). Personal repos are under `~/repos/` on the MacBook
-  and `~/dev/` on the desktop.
+  (`documentation/` in epiForecasting). Personal repos are under `~/repos/` on both
+  devices (`~/dev` on the desktop is a symlink to `~/repos`).
 - Private notes about a shared repo: a `<repo>-private` sibling folder.
 - n2o work: `~/N2O/` (private notes in `~/N2O/notes/`).
 - Career (resume, applications, recruiting, profile): `~/jobapp`.

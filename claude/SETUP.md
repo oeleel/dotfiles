@@ -32,14 +32,15 @@ Leaving a repo for another device: run `/handoff` in it (commits, writes one lin
 `docs/STATUS.md`, pushes the branch). Arriving: open the repo; the SessionStart hook pulls.
 Pushing a feature branch needs no approval (`rules/git.md`).
 
-Pending on the desktop (as of 2026-10-23): move personal repos from `~/dev/` to `~/repos/`
-and leave `~/dev` as a symlink, so paths match the MacBook; then drop the `~/dev/` mention
-from `CLAUDE.md` and this file, and fix `~/dev/...` links in each repo's `docs/STATUS.md`.
+Both devices use the same layout: personal repos in `~/repos/`, n2o work in `~/N2O/` (one
+folder per repo, one `<repo>-<topic>` sibling per git worktree). On the desktop, `~/dev` is a
+symlink to `~/repos` (moved 2026-11-10). Still pending: fix `~/dev/...` links in each repo's
+`docs/STATUS.md`.
 
 ## One-time migration off ~/knowledge (devices set up before 2026-10-21)
 
 `~/knowledge` (`oeleel/knowledge`) is retired and archived; its README maps every old path
-to its new home. On each older device (the desktop keeps personal repos in `~/dev/`):
+to its new home. On each older device (personal repos are in `~/repos/`):
 
 1. `git -C ~/dotfiles pull` (the SessionStart hook usually has already).
 2. Rules: if `~/.claude/rules` is a real directory of symlinks into `~/knowledge/style/`,
@@ -47,12 +48,12 @@ to its new home. On each older device (the desktop keeps personal repos in `~/de
 3. Skills: remove `~/.claude/skills/knowledge` and `~/.claude/skills/apply` if present
    (`/apply` now lives in `~/jobapp/.claude/skills/apply`, available in jobapp sessions).
 4. Auto-memory: delete the `autoMemoryDirectory` line from
-   `~/dev/parlee/.claude/settings.local.json` and `~/dev/kalshekki/.claude/settings.local.json`
+   `~/repos/parlee/.claude/settings.local.json` and `~/repos/kalshekki/.claude/settings.local.json`
    (delete the file if that was its only key). Their verdicts are now `docs/verdicts.md`.
-5. Pull the project repos so they have the new `docs/`: `git -C ~/dev/parlee pull`,
-   `~/dev/kalshekki`, `~/dev/golf-coach`.
+5. Pull the project repos so they have the new `docs/`: `git -C ~/repos/parlee pull`,
+   `~/repos/kalshekki`, `~/repos/golf-coach`.
 6. Clone the three private repos from the table above if missing.
-7. If `~/repos/` or `~/dev/` holds an old N2O workflow template (a parent `CLAUDE.md`
+7. If `~/repos/` holds an old N2O workflow template (a parent `CLAUDE.md`
    asking to "scan the codebase", `.claude/skills/`, `.pm/`, `scripts/`), move it to the
    trash: it loads into every child repo's sessions.
 8. Delete `~/knowledge`.
