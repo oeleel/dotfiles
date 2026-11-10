@@ -4,7 +4,7 @@ Ongoing ricing of the Arch + Omarchy (Hyprland) desktop. The configs live in thi
 
 ## Direction (research as of 2026-07)
 
-Full report: `~/dev/arch-ricing-research.md` on the desktop (an 83-finding workflow).
+Full report: `~/Documents/desktop-setup/arch-ricing-research.md` on the desktop (an 83-finding workflow).
 - Quickshell over eww for the bar and shell.
 - matugen (tonal-spot) drives colours from the wallpaper into Omarchy `colors.toml`,
   core-shell scope. Config in `matugen/`, scripts `bin/wall-theme` and `bin/wall-theme-pick`.
@@ -13,4 +13,4 @@ Full report: `~/dev/arch-ricing-research.md` on the desktop (an 83-finding workf
 ## Next
 
 - Finish matugen wallpaper-driven theming (keybind SUPER+CTRL+W, core-shell scope).
-  Runbook: `~/dev/omarchy-wallpaper-theming.md` on the desktop.
+  Runbook: `~/Documents/desktop-setup/omarchy-wallpaper-theming.md` on the desktop.

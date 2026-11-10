@@ -33,9 +33,7 @@ Leaving a repo for another device: run `/handoff` in it (commits, writes one lin
 Pushing a feature branch needs no approval (`rules/git.md`).
 
 Both devices use the same layout: personal repos in `~/repos/`, n2o work in `~/N2O/` (one
-folder per repo, one `<repo>-<topic>` sibling per git worktree). On the desktop, `~/dev` is a
-symlink to `~/repos` (moved 2026-11-10). Still pending: fix `~/dev/...` links in each repo's
-`docs/STATUS.md`.
+folder per repo, one `<repo>-<topic>` sibling per git worktree).
 
 ## One-time migration off ~/knowledge (devices set up before 2026-10-21)
 
