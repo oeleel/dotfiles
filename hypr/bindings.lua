@@ -26,13 +26,14 @@ o.bind("SUPER + A", "Toggle audio output", "audio-toggle-output")
 hl.unbind("SUPER + W")
 o.bind("SUPER + Q", "Close window", hl.dsp.window.close())
 
--- SUPER+W closes a tab, as Cmd+W does on macOS. Apps here expect CTRL+W for
--- that, so the chord is translated. Terminals are the exception: CTRL+W deletes
--- a word in a shell, and Ghostty closes a tab with CTRL+SHIFT+W. The Herdr app
--- takes SUPER+W itself; hypr/herdr-app-passthrough.lua handles that case.
+-- SUPER+W closes a tab and SUPER+T opens one, as Cmd+W and Cmd+T do on macOS.
+-- Apps here expect CTRL for those, so the chords are translated. Terminals are
+-- the exception: CTRL+W deletes a word and CTRL+T swaps characters in a shell,
+-- and Ghostty uses CTRL+SHIFT+W and CTRL+SHIFT+T for its tabs. The Herdr app
+-- takes both SUPER chords itself; hypr/herdr-app-passthrough.lua handles that.
 -- The down/up split and its delay follow Omarchy's clipboard binds, because
 -- send_shortcut can leave a key stuck (hyprwm/Hyprland discussion 14099).
-local CLOSE_TAB_KEY_RELEASE_DELAY_MS = 50
+local TAB_KEY_RELEASE_DELAY_MS = 50
 
 local function active_window_is_terminal()
   local window = hl.get_active_window()
@@ -47,13 +48,21 @@ local function active_window_is_terminal()
   return false
 end
 
-o.bind("SUPER + W", "Close tab", function()
-  local mods = active_window_is_terminal() and "CTRL SHIFT" or "CTRL"
-  hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "W", state = "down" }))
-  hl.timer(function()
-    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "W", state = "up" }))
-  end, { timeout = CLOSE_TAB_KEY_RELEASE_DELAY_MS, type = "oneshot" })
-end)
+local function send_tab_shortcut(key)
+  return function()
+    local mods = active_window_is_terminal() and "CTRL SHIFT" or "CTRL"
+    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "down" }))
+    hl.timer(function()
+      hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "up" }))
+    end, { timeout = TAB_KEY_RELEASE_DELAY_MS, type = "oneshot" })
+  end
+end
+
+o.bind("SUPER + W", "Close tab", send_tab_shortcut("W"))
+
+-- SUPER+T was Omarchy's floating/tiling toggle. It is dropped, not moved.
+hl.unbind("SUPER + T")
+o.bind("SUPER + T", "New tab", send_tab_shortcut("T"))
 
 -- Wispr Flow dictation. The Hub window is parked on a special workspace by a
 -- rule in hyprland.lua; this is what pulls it back into view. Push-to-talk is

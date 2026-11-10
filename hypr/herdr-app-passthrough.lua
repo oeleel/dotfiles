@@ -26,7 +26,7 @@ local KEY_RELEASE_DELAY_MS = 50
 -- Written exactly as Omarchy writes them. `code:N` is a keycode bind:
 -- 10..19 = digits 1..0, 20 = minus, 21 = equal, 34/35 = left/right bracket.
 local PASSTHROUGH_CHORDS = {
-  "SUPER + T", -- tab.new            (Hyprland: toggle floating)
+  "SUPER + T", -- tab.new            (Hyprland: new tab, sends CTRL+T)
   "SUPER + W", -- tab.close          (close tab: sends CTRL+W)
   "SUPER + P", -- picker             (pseudo window)
   "SUPER + F", -- terminal.search    (full screen)
