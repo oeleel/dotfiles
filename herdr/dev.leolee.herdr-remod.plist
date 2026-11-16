@@ -26,9 +26,6 @@
   </array>
   <key>RunAtLoad</key>
   <true/>
-  <!-- A fallback for a missed file event; the script writes nothing when up to date. -->
-  <key>StartInterval</key>
-  <integer>3600</integer>
   <key>StandardOutPath</key>
   <string>/Users/leolee/Library/Logs/herdr-remod.log</string>
   <key>StandardErrorPath</key>
