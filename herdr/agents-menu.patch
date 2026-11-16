@@ -1,0 +1,101 @@
+--- a/main.js
++++ b/main.js
+@@ -80,7 +80,7 @@
+ 
+ export default class Agents extends View {
+   init(_props, cx) {
+-    if (props()?.sortMenu) return;
++    if (props()?.sortMenu || props()?.agentMenu) return;
+     this.folded = new Set();
+     // Each agent's last state and when it changed (ms), kept across restarts.
+     try { this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}"); } catch { this.changed = {}; }
+@@ -163,6 +163,57 @@
+         .when(s.id === on, (el) => el.child(svg("mods/workspace-chrome/check.svg").size(14).flex_none().text_color(t.foreground)))));
+   }
+ 
++  // Right-click on an agent row: the menu acts on the row clicked, not the focused agent.
++  // An item is [label, icon, command, args]. Rename asks for the name; Close ends the terminal.
++  openAgentMenu(a) {
++    this.openMenu([
++      ["Rename", "square-pen", "tab.rename", { id: a.tab }],
++      [a.pinned ? "Unpin" : "Pin to the top", a.pinned ? "pin-off" : "pin", "terminal.pin", { terminal: a.address, pinned: !a.pinned }],
++      ["Close", "x", "pane.close", { pane: a.pane }],
++    ]);
++  }
++
++  // A sub-agent has a pane only when kept: without one it can take a tab, with one it can go back.
++  openSubMenu(k) {
++    const kept = this.listed.has(k.address);
++    this.openMenu([
++      ["Peek", "search", "terminal.peek", { terminal: k.address }],
++      kept
++        ? ["Send back to parent", "archive", "terminal.park", { terminal: k.address }]
++        : ["Keep as tab", "plus", "terminal.keep", { terminal: k.address }],
++      ["Close", "x", "terminal.kill", { terminal: k.address }],
++    ]);
++  }
++
++  openMenu(items) {
++    openOverlay({ mod: "agents-menu", kind: "popup", width: 200, props: { agentMenu: items } });
++  }
++
++  agentMenu(t, items) {
++    return v_flex()
++      .w_full()
++      .p(5)
++      .bg(t.popover)
++      .text_size(12.8)
++      .children(items.map(([label, icon, command, args]) => v_flex()
++        .when(icon === "x", (el) => el.child(div().mx(7).my(4).h(1).bg(t.border)))
++        .child(h_flex()
++          .id(`agent-menu-${command}`)
++          .h(31)
++          .px(8)
++          .gap(9)
++          .rounded(7)
++          .items_center()
++          .text_color(t.foreground)
++          .hover((el) => el.bg(t.hover))
++          .on_click(() => {
++            closeOverlay(props().overlay);
++            run(command, args);
++          })
++          .child(svg(`mods/workspace-chrome/${icon}.svg`).size(14).flex_none().text_color(t.muted))
++          .child(div().flex_1().child(label)))));
++  }
++
+   peek(addr) {
+     run("terminal.peek", { terminal: addr });
+   }
+@@ -197,6 +248,7 @@
+       .when(on, (el) => el.bg(t.raised))
+       .hover((s) => s.bg(t.hover))
+       .on_click(() => (this.listed.has(k.address) ? run("pane.focus", { terminal: k.address }) : this.peek(k.address)))
++      .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openSubMenu(k); })
+       .children(s.lines.map(l => div().self_start().mt(-4).w(9).h(17).mr(4).flex_none()
+         .when(Boolean(l), el => el.border_l(1.5).border_color(t.input))
+         .when(l === "└" || l === "├", el => el.border_b(1.5).rounded_bl(6))))
+@@ -219,6 +271,7 @@
+   render(cx) {
+     const t = theme();
+     if (props()?.sortMenu) return this.sortMenu(t);
++    if (props()?.agentMenu) return this.agentMenu(t, props().agentMenu);
+     const collapsed = narrow();
+     const sort = sortOf();
+     let list = agents();
+@@ -310,6 +363,7 @@
+           .gap(4)
+           .hover((s) => s.bg(t.hover))
+           .on_click(() => run("pane.focus", { pane: a.pane }))
++          .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openAgentMenu(a); })
+           .child(div().flex_1().min_w(0).whitespace_nowrap().text_right().text_color(t.muted).child(String(i + 1)))
+           .child(h_flex().w(14).flex_none().items_center().justify_center().child(this.status(t, a, true)));
+       }
+@@ -354,6 +408,7 @@
+           cx.notify();
+         })
+         .on_click(() => run("pane.focus", { pane: a.pane }))
++        .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openAgentMenu(a); })
+         .when(Boolean(pic), el => el.child(div().id(`agent-fold-${a.address}`)
+           .when(subs.length > 0, el => el.on_click((_e, cx) => {
+             cx.stop_propagation();

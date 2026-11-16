@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Install: cp this file to ~/Library/LaunchAgents/, then
+     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.leolee.herdr-remod.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.leolee.herdr-remod</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/leolee/dotfiles/herdr/herdr-remod</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HERDR_REMOD_SETTLE_SECONDS</key>
+    <string>3</string>
+  </dict>
+  <!-- Herdr rewrites the shipped files when it starts after an update. -->
+  <key>WatchPaths</key>
+  <array>
+    <string>/Users/leolee/.config/herdr-app/installed.json</string>
+    <string>/Users/leolee/.config/herdr-app/mods/agents</string>
+    <string>/Users/leolee/.config/herdr-app/mods/agents/main.js</string>
+    <string>/Users/leolee/.config/herdr-app/layouts/main.json</string>
+    <string>/Users/leolee/dotfiles/herdr/agents-menu.patch</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <!-- A fallback for a missed file event; the script writes nothing when up to date. -->
+  <key>StartInterval</key>
+  <integer>3600</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/leolee/Library/Logs/herdr-remod.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/leolee/Library/Logs/herdr-remod.log</string>
+</dict>
+</plist>
