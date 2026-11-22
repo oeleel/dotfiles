@@ -21,6 +21,7 @@ mkdir -p ~/.claude/skills && ln -sfn ~/dotfiles/claude/skills/handoff ~/.claude/
 ln -sfn ~/dotfiles/claude/skills/herdr ~/.claude/skills/herdr
 ln -sfn ~/dotfiles/claude/skills/recap ~/.claude/skills/recap
 ln -sfn ~/dotfiles/claude/skills/land-branch ~/.claude/skills/land-branch
+ln -sfn ~/dotfiles/claude/skills/meeting-to-actions ~/.claude/skills/meeting-to-actions
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
