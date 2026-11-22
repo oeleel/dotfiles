@@ -1,6 +1,20 @@
 --- a/main.js
 +++ b/main.js
-@@ -80,7 +80,7 @@
+@@ -2,8 +2,12 @@
+ 
+ import { View, div, image, svg } from "gpui-kit";
+ import { v_flex, h_flex } from "gpui-base";
+-import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout } from "herdr";
++import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, exec, home, checking } from "herdr";
++import { loadSessionNames } from "./sessions.js";
+ 
++// Session names change only when a Claude Code session starts, ends or is renamed.
++const SESSION_POLL_MS = 5000;
++
+ function find(node, id) {
+   if (node?.id === id) return node;
+   for (const child of node?.children ?? []) {
+@@ -80,7 +84,7 @@
  
  export default class Agents extends View {
    init(_props, cx) {
@@ -9,7 +23,51 @@
      this.folded = new Set();
      // Each agent's last state and when it changed (ms), kept across restarts.
      try { this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}"); } catch { this.changed = {}; }
-@@ -163,6 +163,57 @@
+@@ -90,8 +94,43 @@
+     if (!this.pendingPins.length) localStorage.removeItem("pins");
+     this.migratingPins = new Set();
+     cx.timer.every(30000, (cx) => cx.notify());
++    this.sessions = new Map();
++    if (checking()) return;
++    this.refreshSessions(cx);
++    cx.timer.every(SESSION_POLL_MS, (cx) => this.refreshSessions(cx));
+   }
+ 
++  // Redraws only when a name changed: every redraw of a mod redraws the whole window.
++  refreshSessions(cx) {
++    if (this.loadingSessions) return;
++    this.loadingSessions = true;
++    cx.spawn(async (cx) => {
++      let names;
++      try {
++        names = await loadSessionNames(exec, home());
++      } catch (e) {
++        // Once per distinct failure, not every poll.
++        if (String(e) !== this.sessionError) console.log(`agents-menu: no session names: ${e}`);
++        this.sessionError = String(e);
++        return;
++      } finally {
++        this.loadingSessions = false;
++      }
++      this.sessionError = null;
++      const key = JSON.stringify([...names]);
++      if (key === this.sessionKey) return;
++      this.sessionKey = key;
++      this.sessions = names;
++      cx.notify();
++    });
++  }
++
++  // The name other Claude Code sessions use to message this agent (SendMessage), for the hover.
++  sessionTip(address) {
++    const name = this.sessions.get(address);
++    return name ? `Claude session: ${name}` : null;
++  }
++
+   // Stamps agents whose state changed. Done and idle count as one: looking at a
+   // finished agent turns done into idle, and looking isn't the agent doing anything.
+   track(list, now) {
+@@ -163,6 +202,57 @@
          .when(s.id === on, (el) => el.child(svg("mods/workspace-chrome/check.svg").size(14).flex_none().text_color(t.foreground)))));
    }
  
@@ -67,15 +125,25 @@
    peek(addr) {
      run("terminal.peek", { terminal: addr });
    }
-@@ -197,6 +248,7 @@
+@@ -184,6 +274,7 @@
+     const st = kidStatus(k, this.listed);
+     const pic = icon(k.program, 14, t.foreground);
+     const on = k.address === shown;
++    const tip = this.sessionTip(k.address);
+     return h_flex()
+       .id(`sub-${k.address}`)
+       .pl(39)
+@@ -196,7 +287,9 @@
+       .text_size(12.5)
        .when(on, (el) => el.bg(t.raised))
        .hover((s) => s.bg(t.hover))
++      .when(Boolean(tip), (el) => el.tooltip(tip))
        .on_click(() => (this.listed.has(k.address) ? run("pane.focus", { terminal: k.address }) : this.peek(k.address)))
 +      .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openSubMenu(k); })
        .children(s.lines.map(l => div().self_start().mt(-4).w(9).h(17).mr(4).flex_none()
          .when(Boolean(l), el => el.border_l(1.5).border_color(t.input))
          .when(l === "└" || l === "├", el => el.border_b(1.5).rounded_bl(6))))
-@@ -219,6 +271,7 @@
+@@ -219,6 +312,7 @@
    render(cx) {
      const t = theme();
      if (props()?.sortMenu) return this.sortMenu(t);
@@ -83,15 +151,32 @@
      const collapsed = narrow();
      const sort = sortOf();
      let list = agents();
-@@ -310,6 +363,7 @@
+@@ -300,6 +394,7 @@
+       const more = detail.get(a.address);
+       // An agent on another machine (`vps/t7`) says which.
+       const machine = a.address.includes("/") ? a.address.split("/")[0] : null;
++      const tip = this.sessionTip(a.address);
+       if (collapsed) {
+         return h_flex()
+           .id(`ag-${a.address}`)
+@@ -309,7 +404,9 @@
+           .items_center()
            .gap(4)
            .hover((s) => s.bg(t.hover))
++          .when(Boolean(tip), (el) => el.tooltip(tip))
            .on_click(() => run("pane.focus", { pane: a.pane }))
 +          .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openAgentMenu(a); })
            .child(div().flex_1().min_w(0).whitespace_nowrap().text_right().text_color(t.muted).child(String(i + 1)))
            .child(h_flex().w(14).flex_none().items_center().justify_center().child(this.status(t, a, true)));
        }
-@@ -354,6 +408,7 @@
+@@ -348,12 +445,14 @@
+         .when(a.focused, (el) => el.bg(t.selected))
+         .cursor_pointer()
+         .hover((s) => s.bg(t.hover))
++        .when(Boolean(tip), (el) => el.tooltip(tip))
+         .on_hover((on, cx) => {
+           if (on) this.hovered = a.address;
+           else if (this.hovered === a.address) this.hovered = null;
            cx.notify();
          })
          .on_click(() => run("pane.focus", { pane: a.pane }))

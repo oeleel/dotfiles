@@ -23,6 +23,7 @@
     <string>/Users/leolee/.config/herdr-app/mods/agents/main.js</string>
     <string>/Users/leolee/.config/herdr-app/layouts/main.json</string>
     <string>/Users/leolee/dotfiles/herdr/agents-menu.patch</string>
+    <string>/Users/leolee/dotfiles/herdr/agents-menu/sessions.js</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

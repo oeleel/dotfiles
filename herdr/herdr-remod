@@ -3,8 +3,9 @@
 #
 # Herdr replaces its shipped mods and layouts on every update, and it never updates a
 # clone. This script makes the clones follow the shipped files: it copies the shipped
-# `agents` mod, applies agents-menu.patch (the right-click menu), and copies the shipped
-# `main` layout with its agents block pointed at the patched mod.
+# `agents` mod, applies agents-menu.patch (the right-click menu and the session-name hover),
+# adds the patch's own modules from agents-menu/, and copies the shipped `main` layout with
+# its agents block pointed at the patched mod.
 #
 # The launchd job dev.leolee.herdr-remod runs it when Herdr rewrites the shipped files.
 # It writes nothing when the result is already installed. On a failure it keeps the
@@ -13,6 +14,8 @@ set -euo pipefail
 
 readonly APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 readonly PATCH_FILE="$(cd "$(dirname "$0")" && pwd)/agents-menu.patch"
+# Modules the patch imports, copied into the mod as they are.
+readonly MODULES_DIR="$(cd "$(dirname "$0")" && pwd)/agents-menu"
 readonly SHIPPED_MOD="agents"
 readonly MOD="agents-menu"
 readonly SHIPPED_LAYOUT="main"
@@ -40,6 +43,7 @@ layout_file="$APP_HOME/layouts/$LAYOUT.json"
 [ -f "$shipped_mod_dir/main.js" ] || fail "shipped mod not found: $shipped_mod_dir/main.js"
 [ -f "$shipped_layout_file" ] || fail "shipped layout not found: $shipped_layout_file"
 [ -f "$PATCH_FILE" ] || fail "patch not found: $PATCH_FILE"
+[ -d "$MODULES_DIR" ] || fail "patch modules not found: $MODULES_DIR"
 
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
@@ -58,6 +62,7 @@ done
 patch --silent --forward --directory "$built_mod_dir" --strip 1 --reject-file - --input "$PATCH_FILE" \
   || fail "agents-menu.patch does not apply to the shipped $SHIPPED_MOD mod; update the patch"
 rm -f "$built_mod_dir"/*.orig
+cp "$MODULES_DIR"/*.js "$built_mod_dir/"
 
 # The layout: the shipped one with its agents block on the patched mod.
 sed -e "s#\"mod\": \"$SHIPPED_MOD\"\$#\"mod\": \"$MOD\"#" "$shipped_layout_file" > "$built_layout_file"
