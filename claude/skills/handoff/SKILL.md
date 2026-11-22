@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Move the current repo's work to GitHub so another device can continue it - commit what is open, write one handoff line into docs/STATUS.md, push the branch, and print what to do next. Use when Leo says "handoff", "I'm leaving", "switching to the desktop/MacBook", or at the end of a session with unpushed work.
+description: Move the current repo's work to GitHub so another device can continue it - commit what is open, write one handoff line into docs/STATUS.md, push the branch, and print what to do next. Use when Leo says "handoff", "I'm leaving", "switching to the desktop/MacBook", or at the end of a session with unpushed work. Never merges; to land a branch on main, use land-branch.
 ---
 
 # /handoff - leave this repo ready for the other device

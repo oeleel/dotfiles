@@ -20,6 +20,7 @@ ln -sfn ~/dotfiles/claude/hooks       ~/.claude/hooks    # then register them: h
 mkdir -p ~/.claude/skills && ln -sfn ~/dotfiles/claude/skills/handoff ~/.claude/skills/handoff
 ln -sfn ~/dotfiles/claude/skills/herdr ~/.claude/skills/herdr
 ln -sfn ~/dotfiles/claude/skills/recap ~/.claude/skills/recap
+ln -sfn ~/dotfiles/claude/skills/land-branch ~/.claude/skills/land-branch
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
