@@ -1,83 +1,59 @@
-// Claude accounts in the sidebar: each account's usage from claude-swap (cswap), a banner when
-// the active account hits its limit, and a Switch button. A switch replaces the default login,
-// so every Claude Code session moves to the new account on its next request; the panel then
-// sends the resume prompt to the agents the limit stopped.
+// Claude accounts in the right panel stack, opened from the tab bar's Accounts button: each
+// account's usage from claude-swap (cswap), a banner when the active account hits its limit, and
+// a Switch button. A switch replaces the default login, so every Claude Code session moves to
+// the new account on its next request; the panel then sends the resume prompt to the agents the
+// limit stopped. The tab bar (tabs-leo) keeps the shared state fresh and announces limits. This
+// panel renders that state; its own tick (core.js) polls and announces only when the tab bar has
+// not.
 
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, theme, openOverlay, notify, playSound, exec, hc, home, appHome, readTextFile, checking, nextCommand } from "herdr";
-import { loadConfig, cswapCommand, parseList, switchBlocker, suggest, activeAtLimit, markersSince, windowWord, parseSwitch, formatCountdown } from "./accounts.js";
+import { agents, theme, openOverlay, notify, playSound, exec, hc, home, appHome, readTextFile, checking, nextCommand, shared, setShared } from "herdr";
+import { cswapCommand, switchBlocker, suggest, parseSwitch, formatCountdown } from "./accounts.js";
 import { readMarkers, loadSessionTerminals, resumeTargets, resumeAll } from "./resume.js";
+import { STATE_KEY, SWITCHED_AT_KEY, readConfig, tick, refresh, stateLimit, limitTitle } from "./core.js";
 
 const MOD = "accounts";
-const CONFIG_FILE = `mods/${MOD}/config.json`;
-// cswap list may fetch usage for every account before it answers.
-const LIST_TIMEOUT_MS = 60_000;
 const SWITCH_TIMEOUT_MS = 60_000;
-// /usr/bin/env exits 127 when it cannot find the program: cswap is not installed yet.
-const NOT_FOUND_EXIT = 127;
-const INSTALL_HINT = "cswap is not installed: run uv tool install claude-swap, then cswap add";
 // The confirm dialog's Yes runs `accounts.switch-<N>`. nextCommand() hands over only the
 // command's name, so the account number rides in it. The prefix is optional because the
 // delivered form (with or without "accounts.") is not confirmed.
 const SWITCH_COMMAND = /^(?:accounts\.)?switch-(\d+)$/;
 const CONFIRM_SIZE = { width: 440, height: 240 };
-// The sidebar's rail is narrower than this; there each row shows its number and weekly percent.
+// The panel column is 368 px (min 280); under this, each row shows its number and weekly percent.
 const NARROW_PX = 160;
-const BAR_PX = 56;
+// The bar grows with the panel up to this, so the reset countdown keeps its room at 280 px.
+const BAR_MAX_PX = 140;
 const FULL_PERCENT = 100;
-// localStorage: the account whose limit was last announced, so a reload does not toast again,
-// and when this panel last switched, so markers from before it do not flag the new account.
-const ANNOUNCED_KEY = "announced";
-const SWITCHED_AT_KEY = "switchedAt";
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const message = (e) => e?.message ?? String(e);
-
-async function readConfig() {
-  const path = `${appHome()}/${CONFIG_FILE}`;
-  const text = await readTextFile(path);
-  if (text === null) throw new Error(`config.json not found at ${path}`);
-  let raw;
-  try {
-    raw = JSON.parse(text);
-  } catch (e) {
-    throw new Error(`config.json at ${path} is not JSON: ${message(e)}`);
-  }
-  return loadConfig(raw);
-}
-
-function limitTitle(limit) {
-  const stopped = limit.stopped ? ` · ${plural(limit.stopped, "agent")} stopped` : "";
-  return `Account ${limit.row.number} hit its ${windowWord(limit.window)} limit${stopped}`;
-}
+// The shared AccountsState (core.js), or null before any copy has polled.
+const accountsState = () => shared(STATE_KEY) ?? null;
+const switchedAt = () => Number(shared(SWITCHED_AT_KEY)) || 0;
 
 export default class Accounts extends View {
   init(_props, cx) {
     this.config = null;
-    this.view = null;
-    this.polledAt = 0;
-    this.listError = null;
-    this.markers = [];
-    this.markerError = null;
-    this.polling = false;
+    this.configError = null;
+    this.ticking = false;
     this.switching = null;
     this.width = Infinity;
-    this.announced = localStorage.getItem(ANNOUNCED_KEY);
-    this.switchedAt = Number(localStorage.getItem(SWITCHED_AT_KEY)) || 0;
-    // check runs init for real: no cswap, no marker reads (resume.js), no timers there.
+    this.deps = { exec, home: home(), appHome: appHome(), readTextFile, shared, setShared, notify, playSound, now: () => Date.now() };
+    // check runs init for real: no cswap, no marker reads (resume.js), no shared writes, no timers.
     if (checking()) return;
     cx.spawn(async (cx) => {
       try {
-        this.config = await readConfig();
+        this.config = await readConfig(this.deps);
       } catch (e) {
-        this.listError = message(e);
-        console.log(`accounts: ${this.listError}`);
+        this.configError = message(e);
+        console.log(`accounts: ${this.configError}`);
         cx.notify();
         return;
       }
-      this.poll(cx);
-      cx.timer.every(this.config.pollSeconds * 1000, (cx) => this.poll(cx));
+      cx.notify();
+      this.tick(cx);
+      cx.timer.every(this.config.pollSeconds * 1000, (cx) => this.tick(cx));
     });
     cx.spawn(async (cx) => {
       for (;;) {
@@ -93,69 +69,24 @@ export default class Accounts extends View {
     });
   }
 
-  // Redraws once per poll: every redraw of a mod redraws the whole window.
-  poll(cx) {
-    if (checking() || this.polling || !this.config) return;
-    this.polling = true;
-    cx.spawn(async (cx) => {
+  // Polls only when the tab bar has not kept the shared state fresh. A publish re-renders every
+  // mod, so this needs no cx.notify().
+  tick(cx) {
+    if (checking() || this.ticking || !this.config) return;
+    this.ticking = true;
+    cx.spawn(async () => {
       try {
-        await Promise.all([this.readList(), this.readStops()]);
+        await tick(this.deps, this.config);
       } finally {
-        this.polling = false;
+        this.ticking = false;
       }
-      this.announce();
-      cx.notify();
     });
   }
 
-  async readList() {
-    const [cmd, args] = cswapCommand(home(), ["list", "--json"]);
-    let error = null;
-    try {
-      const r = await exec(cmd, args, { timeout: LIST_TIMEOUT_MS });
-      // A missing cswap prints only to stderr ("env: ...: No such file or directory").
-      if (r.code === NOT_FOUND_EXIT) throw new Error(INSTALL_HINT);
-      if (r.code !== 0 && !r.stdout.trim()) throw new Error(`cswap list exited ${r.code}: ${r.stderr.trim() || "no output"}`);
-      this.view = parseList(r.stdout, this.config);
-      this.polledAt = Date.now();
-    } catch (e) {
-      error = message(e);
-    }
-    // Once per distinct failure, not every poll.
-    if (error && error !== this.listError) console.log(`accounts: ${error}`);
-    this.listError = error;
-  }
-
-  async readStops() {
-    let error = null;
-    try {
-      this.markers = await readMarkers(exec, home());
-    } catch (e) {
-      this.markers = [];
-      error = `limit-stop markers: ${message(e)}`;
-    }
-    if (error && error !== this.markerError) console.log(`accounts: ${error}`);
-    this.markerError = error;
-  }
-
-  limit() {
-    return this.view ? activeAtLimit(this.view, markersSince(this.markers, this.switchedAt)) : null;
-  }
-
-  // One toast and one sound per limit event: the event ends when the active account has room.
-  announce() {
-    const limit = this.limit();
-    const key = limit ? String(limit.row.number) : null;
-    if (key === this.announced) return;
-    this.announced = key;
-    if (key) localStorage.setItem(ANNOUNCED_KEY, key);
-    else localStorage.removeItem(ANNOUNCED_KEY);
-    if (!limit) return;
-    const pick = suggest(this.view, this.config);
-    const reason = switchBlocker(this.view);
-    const body = reason ?? (pick ? `Suggested: account ${pick.number} (${pick.label}).` : `No other account is under ${this.config.roomPercent}%.`);
-    notify({ title: limitTitle(limit), body, level: "warning" });
-    playSound("blocked");
+  // Polls now and publishes, so the tab bar and this panel show the switch at once.
+  refresh(cx) {
+    if (checking() || !this.config) return;
+    cx.spawn(() => refresh(this.deps, this.config));
   }
 
   // The stopped agents a switch would resume now, by name, for the confirm dialog.
@@ -171,7 +102,9 @@ export default class Accounts extends View {
   }
 
   askSwitch(number, cx) {
-    const reason = switchBlocker(this.view);
+    const view = accountsState()?.view;
+    if (!view) return;
+    const reason = switchBlocker(view);
     if (reason) {
       notify({ title: reason, level: "error" });
       return;
@@ -180,7 +113,7 @@ export default class Accounts extends View {
       cx.spawn((cx) => this.switchTo(number, cx));
       return;
     }
-    const row = this.view.rows.find((r) => r.number === number);
+    const row = view.rows.find((r) => r.number === number);
     cx.spawn(async () => {
       let resume;
       if (!this.config.resumeAfterSwitch) resume = "Stopped agents are not resumed (resumeAfterSwitch is off).";
@@ -214,7 +147,8 @@ export default class Accounts extends View {
       return;
     }
     // Checked again here: the dialog may have waited while a poll found a problem.
-    const reason = this.view ? switchBlocker(this.view) : "Switch blocked: cswap has not listed the accounts yet";
+    const view = accountsState()?.view;
+    const reason = view ? switchBlocker(view) : "Switch blocked: cswap has not listed the accounts yet";
     if (reason) {
       notify({ title: reason, level: "error" });
       return;
@@ -227,9 +161,9 @@ export default class Accounts extends View {
         notify({ title: `Switch to account ${number} failed`, body: result.message, level: "error" });
         return;
       }
-      this.switchedAt = Date.now();
-      localStorage.setItem(SWITCHED_AT_KEY, String(this.switchedAt));
-      this.poll(cx);
+      // Shared, so the tab bar also ignores markers from before the switch.
+      setShared(SWITCHED_AT_KEY, Date.now());
+      this.refresh(cx);
       const warnings = result.warnings.join("\n");
       if (!this.config.resumeAfterSwitch) {
         notify({ title: `Switched to ${result.to}`, body: warnings || undefined, level: "success" });
@@ -239,7 +173,7 @@ export default class Accounts extends View {
       // Sessions keep the old login until Claude Code's Keychain cache expires.
       await cx.sleep(this.config.resumeDelaySeconds * 1000);
       this.reportResume(result.to, await this.resume());
-      this.poll(cx);
+      this.refresh(cx);
     } finally {
       this.switching = null;
       cx.notify();
@@ -283,11 +217,12 @@ export default class Accounts extends View {
     notify({ title: `Switched to ${to} · resumed ${plural(sent, "agent")}`, body: body || undefined, level: body ? "warning" : "success" });
   }
 
-  ageText(now) {
-    const ages = this.view.rows.map((r) => r.ageSeconds).filter((a) => a !== null);
-    const active = this.view.rows.find((r) => r.active)?.ageSeconds;
+  // cswap's age of the active account's reading, plus the time since the poll.
+  ageText(state, now) {
+    const ages = state.view.rows.map((r) => r.ageSeconds).filter((a) => a !== null);
+    const active = state.view.rows.find((r) => r.active)?.ageSeconds;
     if (active == null && !ages.length) return "";
-    const seconds = (active ?? Math.min(...ages)) + (now - this.polledAt) / 1000;
+    const seconds = (active ?? Math.min(...ages)) + (now - state.polledAt) / 1000;
     return seconds < 60 ? "updated just now" : `updated ${formatCountdown(seconds * 1000)} ago`;
   }
 
@@ -320,7 +255,7 @@ export default class Accounts extends View {
   }
 
   windowLine(t, row, w, now) {
-    const fill = Math.round((BAR_PX * Math.min(Math.max(w.pct ?? 0, 0), FULL_PERCENT)) / FULL_PERCENT);
+    const fill = Math.min(Math.max(w.pct ?? 0, 0), FULL_PERCENT);
     const resets = w.resetsAtMs === null ? "" : `resets ${formatCountdown(w.resetsAtMs - now)}`;
     return h_flex()
       .h(16)
@@ -329,7 +264,7 @@ export default class Accounts extends View {
       .items_center()
       .text_size(11)
       .child(div().w(16).flex_none().text_color(t.dim).child(w.name))
-      .child(div().w(BAR_PX).h(4).flex_none().rounded(2).bg(t.raised).child(div().w(fill).h(4).rounded(2).bg(this.barColor(t, row, w))))
+      .child(div().flex_1().max_w(BAR_MAX_PX).h(4).rounded(2).bg(t.raised).child(div().w(`${fill}%`).h(4).rounded(2).bg(this.barColor(t, row, w))))
       .child(div().w(30).flex_none().text_right().text_color(row.stale ? t.dim : t.muted).child(w.pct === null ? "?" : `${Math.round(w.pct)}%`))
       .child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(resets));
   }
@@ -376,13 +311,13 @@ export default class Accounts extends View {
       .child(div().text_color(week ? this.barColor(t, row, week) : t.blocked).child(mark));
   }
 
-  banner(t, limit, canSwitch) {
-    const pick = suggest(this.view, this.config);
+  banner(t, view, limit, canSwitch) {
+    const pick = suggest(view, this.config);
     const week = pick?.windows.find((w) => w.name === "7d");
     const pickText = pick ? `Try ${pick.number} ${pick.label}${week && week.pct !== null ? ` · 7d ${Math.round(week.pct)}%` : ""}` : `No other account is under ${this.config.roomPercent}%.`;
     return v_flex()
-      .mx(8)
-      .mb(6)
+      .mx(6)
+      .mt(6)
       .p(8)
       .gap(4)
       .flex_none()
@@ -400,20 +335,24 @@ export default class Accounts extends View {
   }
 
   line(t, text, color) {
-    return div().px(16).pb(6).flex_none().text_size(11.5).text_color(color).child(text);
+    return div().px(14).pt(8).flex_none().text_size(11.5).text_color(color).child(text);
   }
 
   render(_cx) {
     const t = theme();
     const narrow = this.width < NARROW_PX;
     const now = Date.now();
-    const limit = this.view && this.config ? this.limit() : null;
-    const blocker = this.view ? switchBlocker(this.view) : null;
+    const state = accountsState();
+    // Rows wait for the config: their bar colors use roomPercent.
+    const view = this.config ? state?.view ?? null : null;
+    const limit = view ? stateLimit(state, switchedAt()) : null;
+    const blocker = view ? switchBlocker(view) : null;
     const canSwitch = !blocker && this.switching === null;
-    const rows = !this.view || !this.config
-      ? []
-      : this.view.rows.map((r) => (narrow ? this.compactRow(t, r) : this.row(t, r, canSwitch, now)));
-    const waiting = !this.view && !this.listError ? "Reading cswap..." : null;
+    // With a view, the error is the marker read's; without one, cswap's.
+    const error = state?.error ?? null;
+    const errorColor = view ? t.dim : t.blocked;
+    const waiting = !state && !this.configError ? "Reading cswap..." : null;
+    const rows = view ? view.rows.map((r) => (narrow ? this.compactRow(t, r) : this.row(t, r, canSwitch, now))) : [];
     return v_flex()
       .id("root")
       .on_size_change((size, cx) => {
@@ -423,31 +362,35 @@ export default class Accounts extends View {
       })
       .size_full()
       .min_h(0)
-      .bg(t.chrome)
-      .border_t(1)
+      .rounded(10)
+      .overflow_hidden()
+      .bg(t.background)
+      .border_1()
       .border_color(t.border)
+      .text_color(t.foreground)
       .text_size(12.5)
       .when(!narrow, (el) =>
         el.child(
           h_flex()
-            .px(16)
-            .h(41)
-            .pt(14)
-            .pb(5)
+            .h(42)
             .flex_none()
+            .px(14)
+            .gap(8)
             .items_center()
-            .justify_between()
-            .child(div().text_size(11.5).font_medium().text_color(t.dim).child("Accounts"))
-            .child(div().text_size(11).text_color(t.dim).child(this.view ? this.ageText(now) : "")),
+            .border_b(1)
+            .border_color(t.border)
+            .child(div().font_semibold().text_size(13).child("Accounts"))
+            .child(div().flex_1())
+            .child(div().text_size(11).text_color(t.dim).child(view ? this.ageText(state, now) : "")),
         ),
       )
-      .when(narrow && Boolean(limit || this.listError), (el) => el.child(h_flex().h(22).justify_center().items_center().text_color(t.blocked).child("!")))
-      .when(!narrow && Boolean(this.listError), (el) => el.child(this.line(t, this.listError, t.blocked)))
-      .when(!narrow && Boolean(this.markerError), (el) => el.child(this.line(t, this.markerError, t.dim)))
+      .when(narrow && Boolean(limit || this.configError || (error && !view)), (el) => el.child(h_flex().h(22).justify_center().items_center().text_color(t.blocked).child("!")))
+      .when(!narrow && Boolean(this.configError), (el) => el.child(this.line(t, this.configError, t.blocked)))
+      .when(!narrow && Boolean(error), (el) => el.child(this.line(t, error, errorColor)))
       .when(!narrow && Boolean(waiting), (el) => el.child(this.line(t, waiting, t.dim)))
       .when(!narrow && Boolean(blocker), (el) => el.child(this.line(t, blocker, t.blocked)))
       .when(!narrow && this.switching !== null, (el) => el.child(this.line(t, `Switching to account ${this.switching}...`, t.muted)))
-      .when(!narrow && Boolean(limit), (el) => el.child(this.banner(t, limit, canSwitch)))
-      .child(v_flex().id("acc-list").flex_1().min_h(0).px(narrow ? 0 : 8).overflow_y_scrollbar().children(rows));
+      .when(!narrow && Boolean(limit), (el) => el.child(this.banner(t, view, limit, canSwitch)))
+      .child(v_flex().id("acc-list").flex_1().min_h(0).p(narrow ? 0 : 6).overflow_y_scrollbar().children(rows));
   }
 }
