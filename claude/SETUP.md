@@ -27,6 +27,8 @@ ln -sfn ~/dotfiles/claude/skills/coverage-audit ~/.claude/skills/coverage-audit
 ln -sfn ~/dotfiles/claude/skills/run-status ~/.claude/skills/run-status
 git clone https://github.com/Leonxlnx/taste-skill.git ~/repos/taste-skill   # third-party; git pull updates
 ln -sfn ~/repos/taste-skill/skills/taste-skill ~/.claude/skills/design-taste-frontend
+# taste skill's WebP photos: Homebrew's plain ffmpeg has no libwebp; check with ffmpeg -encoders | grep libwebp
+brew install ffmpeg-full && brew link --force ffmpeg-full   # macOS (keg-only, so link it)
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
