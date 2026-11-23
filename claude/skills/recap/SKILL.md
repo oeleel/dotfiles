@@ -1,6 +1,6 @@
 ---
 name: recap
-description: Recap the current session - the original intent and how it changed, what is done with proof, and what still needs to be done, each open item tagged with what it waits on. Use whenever Leo asks "recap", "where are we", "what's the status", "what was the original intent/purpose of this session", "what has been done and what still needs to be done", "what did we do overnight", "what happened while I was gone", "what's left", "catch me up", or "what do I need to do next", even without the word "recap". Session-scoped; for a full NAH project or sprint briefing use nah-project-overview or nah-sprint-overview.
+description: Recap the current session - the original intent and how it changed, what is done with proof, and what still needs to be done, each open item tagged with what it waits on. Use whenever Leo asks "recap", "where are we", "what's the status", "what was the original intent/purpose of this session", "what has been done and what still needs to be done", "what did we do overnight", "what happened while I was gone", "what's left", "catch me up", or "what do I need to do next", even without the word "recap". Session-scoped; for a full NAH project or sprint briefing use nah-project-overview or nah-sprint-overview. For how a job that runs right now is going (progress, ETA, hangs, tell me when done), use run-status.
 ---
 
 # /recap - purpose, done, still to do

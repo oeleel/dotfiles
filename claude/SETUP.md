@@ -24,6 +24,7 @@ ln -sfn ~/dotfiles/claude/skills/land-branch ~/.claude/skills/land-branch
 ln -sfn ~/dotfiles/claude/skills/meeting-to-actions ~/.claude/skills/meeting-to-actions
 ln -sfn ~/dotfiles/claude/skills/meeting-pack ~/.claude/skills/meeting-pack
 ln -sfn ~/dotfiles/claude/skills/coverage-audit ~/.claude/skills/coverage-audit
+ln -sfn ~/dotfiles/claude/skills/run-status ~/.claude/skills/run-status
 gh repo clone oeleel/jobapp ~/jobapp
 gh repo clone oeleel/n2o-notes ~/N2O/notes
 gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clone>
