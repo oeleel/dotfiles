@@ -1,37 +1,45 @@
 #!/bin/bash
-# Rebuild the personal Herdr agents panel from the shipped one, and install the accounts panel.
+# Rebuild Leo's Herdr clones of two shipped mods, install his accounts panel, and build his layout.
 #
-# Herdr replaces its shipped mods and layouts on every update, and it never updates a
-# clone. This script makes the clones follow the shipped files: it copies the shipped
-# `agents` mod, applies agents-menu.patch (the right-click menu and the session-name hover),
-# adds the patch's own modules from agents-menu/, and copies the shipped `main` layout with
-# its agents block pointed at the patched mod. It also installs Leo's own `accounts` mod from
-# accounts/ (without the fixtures and tests) and adds its block under the agents block, so the
-# layout keeps the accounts panel after every Herdr update.
+# Herdr replaces its shipped mods and layouts on every update, and it never updates a clone.
+# This script makes the clones follow the shipped files. Each clone is the shipped mod, renamed
+# as `mod.clone` renames it, with <clone>.patch applied and every file in <clone>/ added:
+#   agents-menu, from `agents`: the right-click menu and the session-name hover.
+#   tabs-leo, from `tabs`: the Accounts button in the tab bar. Its patch also imports core.js,
+#     tab.js, accounts.js and resume.js from accounts/, which go in as they are.
+# It also installs Leo's own `accounts` mod from accounts/ (without the fixtures and tests).
+# The main-leo layout is the shipped `main` layout with the agents and tabs blocks pointed at
+# the installed clones and one accounts block: last in the right-side panel-body stack, which
+# the tab bar button opens, or after the agents block in the sidebar while tabs-leo is not
+# installed, so the panel stays reachable. The layout keeps these after every Herdr update.
 #
 # The launchd job dev.leolee.herdr-remod runs it when Herdr rewrites the shipped files or a
 # source file here changes. It writes nothing when the result is already installed. The
-# three parts (the agents-menu mod, the accounts mod, the layout) stand alone: a part that
-# fails keeps its installed copy and posts a notification, the other parts still go in, and
-# the run exits 1. The layout names only mods that are installed.
+# four parts (the two clones, the accounts mod, the layout) stand alone: a part that fails
+# keeps its installed copy and posts a notification, the other parts still go in, and the
+# run exits 1. The layout names only mods that are installed.
 set -euo pipefail
 
 readonly APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 readonly SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly PATCH_FILE="$SOURCE_DIR/agents-menu.patch"
-# Modules the patch imports, copied into the mod as they are.
-readonly MODULES_DIR="$SOURCE_DIR/agents-menu"
-readonly SHIPPED_MOD="agents"
-readonly MOD="agents-menu"
-readonly SHIPPED_LAYOUT="main"
-readonly LAYOUT="main-leo"
+readonly AGENTS_SHIPPED_MOD="agents"
+readonly AGENTS_MOD="agents-menu"
+readonly TABS_SHIPPED_MOD="tabs"
+readonly TABS_MOD="tabs-leo"
 readonly ACCOUNTS_SOURCE_DIR="$SOURCE_DIR/accounts"
 readonly ACCOUNTS_MOD="accounts"
+# The accounts modules the tabs-leo patch imports.
+readonly TABS_ACCOUNTS_MODULES=(core.js tab.js accounts.js resume.js)
 # Only the tests read these; the app never does.
 readonly ACCOUNTS_TEST_ONLY=(fixtures '*.test.*')
-# The accounts block goes right after the agents block in this column.
+readonly SHIPPED_LAYOUT="main"
+readonly LAYOUT="main-leo"
+# With tabs-leo installed, the accounts block goes last in this stack.
+readonly PANEL_STACK="panel-body"
+readonly PANEL_ACCOUNTS_BLOCK='{"id":"accounts","type":"block","content":{"mod":"accounts"}}'
+# Without tabs-leo, it goes right after the agents block in this column.
 readonly SIDEBAR_COLUMN="sidebar-lists"
-readonly ACCOUNTS_BLOCK='{"id":"accounts","type":"block","size":{"weight":0.6},"min":110,"content":{"mod":"accounts"}}'
+readonly SIDEBAR_ACCOUNTS_BLOCK='{"id":"accounts","type":"block","size":{"weight":0.6},"min":110,"content":{"mod":"accounts"}}'
 # Herdr writes these into every mod folder; they are not part of the mod.
 readonly APP_WRITTEN=(gpui-kit.d.ts jsconfig.json)
 # Herdr rewrites several shipped files in a row; wait until it is done.
@@ -49,17 +57,13 @@ warn() {
 
 sleep "$SETTLE_SECONDS"
 
-shipped_mod_dir="$APP_HOME/mods/$SHIPPED_MOD"
 shipped_layout_file="$APP_HOME/layouts/$SHIPPED_LAYOUT.json"
-mod_dir="$APP_HOME/mods/$MOD"
 accounts_dir="$APP_HOME/mods/$ACCOUNTS_MOD"
 layout_file="$APP_HOME/layouts/$LAYOUT.json"
 
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
-built_mod_dir="$build_dir/$MOD"
 built_accounts_dir="$build_dir/$ACCOUNTS_MOD"
-renamed_layout_file="$build_dir/$LAYOUT.renamed.json"
 built_layout_file="$build_dir/$LAYOUT.json"
 
 excludes=()
@@ -68,6 +72,8 @@ accounts_excludes=("${excludes[@]}")
 for name in "${ACCOUNTS_TEST_ONLY[@]}"; do accounts_excludes+=(--exclude "$name"); done
 diff_excludes=()
 for name in "${APP_WRITTEN[@]}"; do diff_excludes+=(-x "$name"); done
+tabs_accounts_files=()
+for name in "${TABS_ACCOUNTS_MODULES[@]}"; do tabs_accounts_files+=("$ACCOUNTS_SOURCE_DIR/$name"); done
 
 # Installs a built mod unless the installed one is already current. A mod that fails
 # herdr-app check keeps its installed copy.
@@ -85,23 +91,32 @@ install_mod() {
   echo "herdr-remod: rebuilt mods/$name"
 }
 
-# The agents-menu mod: the shipped files, renamed as `mod.clone` renames them, plus the patch.
-build_agents_menu() {
-  [ -f "$shipped_mod_dir/main.js" ] || { warn "shipped mod not found: $shipped_mod_dir/main.js"; return; }
-  [ -f "$PATCH_FILE" ] || { warn "patch not found: $PATCH_FILE"; return; }
-  [ -d "$MODULES_DIR" ] || { warn "patch modules not found: $MODULES_DIR"; return; }
-  rsync -a "${excludes[@]}" "$shipped_mod_dir/" "$built_mod_dir/"
-  for script in "$built_mod_dir"/*.js; do
-    sed -e "s#mods/$SHIPPED_MOD/#mods/$MOD/#g" -e "s#mod: \"$SHIPPED_MOD\"#mod: \"$MOD\"#g" "$script" > "$script.renamed"
+# A clone: the shipped mod's files, renamed as `mod.clone` renames them, then <clone>.patch,
+# then every file in <clone>/ and the extra files given, as they are.
+build_clone() {
+  local shipped="$1" clone="$2"
+  shift 2
+  local shipped_dir="$APP_HOME/mods/$shipped" patch_file="$SOURCE_DIR/$clone.patch"
+  local modules_dir="$SOURCE_DIR/$clone" built="$build_dir/$clone" extra script
+  [ -f "$shipped_dir/main.js" ] || { warn "shipped mod not found: $shipped_dir/main.js"; return; }
+  [ -f "$patch_file" ] || { warn "patch not found: $patch_file"; return; }
+  [ -d "$modules_dir" ] || { warn "patch modules not found: $modules_dir"; return; }
+  for extra in "$@"; do
+    [ -f "$extra" ] || { warn "patch module not found: $extra"; return; }
+  done
+  rsync -a "${excludes[@]}" "$shipped_dir/" "$built/"
+  for script in "$built"/*.js; do
+    sed -e "s#mods/$shipped/#mods/$clone/#g" -e "s#mod: \"$shipped\"#mod: \"$clone\"#g" "$script" > "$script.renamed"
     mv "$script.renamed" "$script"
   done
-  if ! patch --silent --forward --directory "$built_mod_dir" --strip 1 --reject-file - --input "$PATCH_FILE"; then
-    warn "agents-menu.patch does not apply to the shipped $SHIPPED_MOD mod; update the patch"
+  if ! patch --silent --forward --directory "$built" --strip 1 --reject-file - --input "$patch_file"; then
+    warn "$clone.patch does not apply to the shipped $shipped mod; update the patch"
     return
   fi
-  rm -f "$built_mod_dir"/*.orig
-  cp "$MODULES_DIR"/*.js "$built_mod_dir/"
-  install_mod "$built_mod_dir" "$mod_dir"
+  rm -f "${built:?}"/*.orig
+  rsync -a "$modules_dir/" "$built/"
+  if [ $# -gt 0 ]; then cp "$@" "$built/"; fi
+  install_mod "$built" "$APP_HOME/mods/$clone"
 }
 
 # The accounts mod: Leo's own files as they are.
@@ -111,39 +126,75 @@ build_accounts() {
   install_mod "$built_accounts_dir" "$accounts_dir"
 }
 
-# The layout: the shipped one, built after the mods so it names only installed mods. The
-# agents block stays on the shipped mod until a patched one is installed. The accounts block
-# goes right after it once an accounts mod is installed.
+# Prints how many objects in a layout file ($3) match a jq condition ($1) on $name ($2).
+count_in_layout() {
+  jq --arg name "$2" "[.. | objects | select($1)] | length" "$3"
+}
+
+# The layout: the shipped one, built after the mods so it names only installed mods. Each
+# block stays on its shipped mod until the clone is installed. The accounts block goes into
+# panel-body once accounts and tabs-leo are installed, and into the sidebar once only
+# accounts is.
 build_layout() {
   [ -f "$shipped_layout_file" ] || { warn "shipped layout not found: $shipped_layout_file"; return; }
-  local agents_mod="$SHIPPED_MOD" block_count accounts_count column_mods
-  if [ -f "$mod_dir/main.js" ]; then agents_mod="$MOD"; fi
-  sed -e "s#\"mod\": \"$SHIPPED_MOD\"\$#\"mod\": \"$agents_mod\"#" "$shipped_layout_file" > "$renamed_layout_file"
-  block_count="$(grep -c "\"mod\": \"$agents_mod\"\$" "$renamed_layout_file" || true)"
-  if [ "$block_count" != "1" ]; then
-    warn "expected 1 $SHIPPED_MOD block in the shipped $SHIPPED_LAYOUT layout, found $block_count"
+  if ! jq empty "$shipped_layout_file" 2>"$build_dir/jq.log"; then
+    warn "the shipped $SHIPPED_LAYOUT layout is not valid JSON: $(tr '\n' ' ' < "$build_dir/jq.log")"
     return
   fi
+  local found holds where agents_mod="$AGENTS_SHIPPED_MOD" tabs_mod="$TABS_SHIPPED_MOD" accounts_in=""
+  found="$(count_in_layout '.content.mod? == $name' "$AGENTS_SHIPPED_MOD" "$shipped_layout_file")"
+  if [ "$found" != "1" ]; then
+    warn "expected 1 $AGENTS_SHIPPED_MOD block in the shipped $SHIPPED_LAYOUT layout, found $found"
+    return
+  fi
+  found="$(count_in_layout '.content.mod? == $name' "$TABS_SHIPPED_MOD" "$shipped_layout_file")"
+  if [ "$found" != "1" ]; then
+    holds="$(jq -r '[.. | objects | select(.type == "block") | .content.mod? // empty] | unique | join(", ")' "$shipped_layout_file")"
+    warn "expected 1 $TABS_SHIPPED_MOD block in the shipped $SHIPPED_LAYOUT layout, found $found (blocks: ${holds:-none})"
+    return
+  fi
+  found="$(count_in_layout '.id == $name and .type == "stack"' "$PANEL_STACK" "$shipped_layout_file")"
+  if [ "$found" != "1" ]; then
+    holds="$(jq -r '[.. | objects | select(.type == "stack") | .id] | join(", ")' "$shipped_layout_file")"
+    warn "expected 1 $PANEL_STACK stack in the shipped $SHIPPED_LAYOUT layout, found $found (stacks: ${holds:-none})"
+    return
+  fi
+
+  if [ -f "$APP_HOME/mods/$AGENTS_MOD/main.js" ]; then agents_mod="$AGENTS_MOD"; fi
+  if [ -f "$APP_HOME/mods/$TABS_MOD/main.js" ]; then tabs_mod="$TABS_MOD"; fi
   if [ -f "$accounts_dir/main.js" ]; then
-    # jq prints the 2-space format Herdr ships, and the same input always gives the same
-    # bytes, so `cmp` below still finds a current layout current.
-    if ! jq --arg column "$SIDEBAR_COLUMN" --arg after "$agents_mod" --argjson block "$ACCOUNTS_BLOCK" '
-      (.. | objects | select(.id == $column) | .children) |=
-        [.[] | ., (select(.content.mod? == $after) | $block)]
-    ' "$renamed_layout_file" > "$built_layout_file" 2>"$build_dir/jq.log"; then
-      warn "jq could not add the $ACCOUNTS_MOD block to the $LAYOUT layout: $(tr '\n' ' ' < "$build_dir/jq.log")"
-      return
-    fi
-    accounts_count="$(jq --arg mod "$ACCOUNTS_MOD" '[.. | objects | select(.content.mod? == $mod)] | length' "$built_layout_file")"
-    if [ "$accounts_count" != "1" ]; then
-      column_mods="$(jq -r --arg column "$SIDEBAR_COLUMN" \
-        '[.. | objects | select(.id == $column) | .children[]? | .content.mod? // .id] | join(", ")' \
+    # The tab bar button opens the panel; without the button, the sidebar keeps it reachable.
+    if [ "$tabs_mod" = "$TABS_MOD" ]; then accounts_in="$PANEL_STACK"; else accounts_in="$SIDEBAR_COLUMN"; fi
+  fi
+  # jq prints the 2-space format Herdr ships, and the same input always gives the same
+  # bytes, so `cmp` below still finds a current layout current.
+  if ! jq --arg agents "$AGENTS_SHIPPED_MOD" --arg agents_mod "$agents_mod" \
+    --arg tabs "$TABS_SHIPPED_MOD" --arg tabs_mod "$tabs_mod" \
+    --arg accounts_in "$accounts_in" --arg panel "$PANEL_STACK" --arg sidebar "$SIDEBAR_COLUMN" \
+    --argjson panel_block "$PANEL_ACCOUNTS_BLOCK" --argjson sidebar_block "$SIDEBAR_ACCOUNTS_BLOCK" '
+    (.. | objects | select(.content.mod? == $agents) | .content.mod) = $agents_mod
+    | (.. | objects | select(.content.mod? == $tabs) | .content.mod) = $tabs_mod
+    | if $accounts_in == $panel then
+        (.. | objects | select(.id == $panel and .type == "stack") | .children) += [$panel_block]
+      elif $accounts_in == $sidebar then
+        (.. | objects | select(.id == $sidebar) | .children) |=
+          [.[] | ., (select(.content.mod? == $agents_mod) | $sidebar_block)]
+      else . end
+  ' "$shipped_layout_file" > "$built_layout_file" 2>"$build_dir/jq.log"; then
+    warn "jq could not build the $LAYOUT layout: $(tr '\n' ' ' < "$build_dir/jq.log")"
+    return
+  fi
+  if [ -n "$accounts_in" ]; then
+    found="$(count_in_layout '.content.mod? == $name' "$ACCOUNTS_MOD" "$built_layout_file")"
+    if [ "$found" != "1" ]; then
+      where="in $accounts_in"
+      if [ "$accounts_in" = "$SIDEBAR_COLUMN" ]; then where="after the $agents_mod block in $SIDEBAR_COLUMN"; fi
+      holds="$(jq -r --arg id "$accounts_in" \
+        '[.. | objects | select(.id == $id) | .children[]? | .content.mod? // .id] | join(", ")' \
         "$built_layout_file")"
-      warn "expected 1 $ACCOUNTS_MOD block after the $agents_mod block in $SIDEBAR_COLUMN of the $LAYOUT layout, found $accounts_count ($SIDEBAR_COLUMN holds: ${column_mods:-no blocks})"
+      warn "expected 1 $ACCOUNTS_MOD block $where of the $LAYOUT layout, found $found ($accounts_in holds: ${holds:-no blocks})"
       return
     fi
-  else
-    cp "$renamed_layout_file" "$built_layout_file"
   fi
   cmp -s "$built_layout_file" "$layout_file" && return
   # mv replaces the file in one step, so Herdr never reads a half-written file.
@@ -152,7 +203,8 @@ build_layout() {
   echo "herdr-remod: rebuilt layouts/$LAYOUT.json"
 }
 
-build_agents_menu
+build_clone "$AGENTS_SHIPPED_MOD" "$AGENTS_MOD"
+build_clone "$TABS_SHIPPED_MOD" "$TABS_MOD" "${tabs_accounts_files[@]}"
 build_accounts
 build_layout
 if $failed; then exit 1; fi
