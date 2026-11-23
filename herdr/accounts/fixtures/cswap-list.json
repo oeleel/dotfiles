@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "activeAccountNumber": 1,
+  "accounts": [
+    {
+      "number": 1,
+      "email": "main@example.com",
+      "organizationName": "main@example.com's Organization",
+      "organizationUuid": "",
+      "isOrganization": false,
+      "active": true,
+      "usageStatus": "ok",
+      "usage": {
+        "sevenDay": { "pct": 100.0, "resetsAt": "2026-11-25T09:00:00+00:00", "countdown": "1d 20h", "clock": "Nov 25 04:00" }
+      },
+      "plan": { "label": "Ultra", "tier": "default_claude_max_20x", "expired": false, "fetchedAt": "2026-11-23T10:00:00Z" },
+      "usageFetchedAt": "2026-11-23T12:58:00Z",
+      "usageAgeSeconds": 120.0
+    },
+    {
+      "number": 2,
+      "email": "alt@example.com",
+      "organizationName": "alt@example.com's Organization",
+      "organizationUuid": "",
+      "isOrganization": false,
+      "active": false,
+      "alias": "alt",
+      "usageStatus": "ok",
+      "usage": {
+        "fiveHour": { "pct": 12.0, "resetsAt": "2026-11-23T16:00:00+00:00", "countdown": "3h", "clock": "11:00" },
+        "sevenDay": { "pct": 21.0, "resetsAt": "2026-11-28T14:00:00+00:00", "countdown": "5d 1h", "clock": "Nov 28 09:00" }
+      },
+      "plan": { "label": "Ultra", "tier": "default_claude_max_20x", "expired": false, "fetchedAt": "2026-11-23T10:00:00Z" },
+      "usageFetchedAt": "2026-11-23T12:55:00Z",
+      "usageAgeSeconds": 300.0
+    },
+    {
+      "number": 3,
+      "email": "third@example.com",
+      "organizationName": "third@example.com's Organization",
+      "organizationUuid": "",
+      "isOrganization": false,
+      "active": false,
+      "usageStatus": "ok",
+      "usage": {
+        "sevenDay": { "pct": 40.0, "resetsAt": "2026-11-26T08:00:00+00:00", "countdown": "2d 19h", "clock": "Nov 26 03:00" }
+      },
+      "plan": { "label": "Ultra", "tier": "default_claude_max_20x", "expired": false, "fetchedAt": "2026-11-23T10:00:00Z" },
+      "usageFetchedAt": "2026-11-23T12:50:00Z",
+      "usageAgeSeconds": 600.0
+    },
+    {
+      "number": 4,
+      "email": "fourth@example.com",
+      "organizationName": "fourth@example.com's Organization",
+      "organizationUuid": "",
+      "isOrganization": false,
+      "active": false,
+      "usageStatus": "relogin_required",
+      "usage": null
+    }
+  ]
+}

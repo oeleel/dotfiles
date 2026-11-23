@@ -1,0 +1,10 @@
+{
+  "autoSwitch": false,
+  "pollSeconds": 60,
+  "resumeAfterSwitch": true,
+  "resumePrompt": "keep working",
+  "resumeDelaySeconds": 35,
+  "confirmSwitch": true,
+  "roomPercent": 90,
+  "suggestOrder": "soonest-weekly-reset"
+}
