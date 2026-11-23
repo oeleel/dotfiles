@@ -39,6 +39,7 @@
     <string>/Users/leolee/dotfiles/herdr/accounts/resume.js</string>
     <string>/Users/leolee/dotfiles/herdr/accounts/core.js</string>
     <string>/Users/leolee/dotfiles/herdr/accounts/tab.js</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/add-account.sh</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

@@ -8,7 +8,7 @@
 
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, theme, openOverlay, notify, playSound, exec, hc, home, appHome, readTextFile, checking, nextCommand, shared, setShared } from "herdr";
+import { agents, theme, openOverlay, notify, playSound, exec, hc, home, appHome, readTextFile, checking, nextCommand, shared, setShared, run } from "herdr";
 import { cswapCommand, switchBlocker, suggest, parseSwitch, formatCountdown } from "./accounts.js";
 import { readMarkers, loadSessionTerminals, resumeTargets, resumeAll } from "./resume.js";
 import { STATE_KEY, SWITCHED_AT_KEY, readConfig, tick, refresh, stateLimit, limitTitle } from "./core.js";
@@ -24,6 +24,9 @@ const CONFIRM_SIZE = { width: 440, height: 240 };
 const NARROW_PX = 160;
 // The bar grows with the panel up to this, so the reset countdown keeps its room at 280 px.
 const BAR_MAX_PX = 140;
+// Signs in to a throwaway config folder, so adding an account never moves the live login.
+const ADD_SCRIPT = `mods/${MOD}/add-account.sh`;
+const ADD_TAB_NAME = "Add Claude account";
 // The empty part of a bar: a faint foreground shows on every row background (t.raised matched
 // the active row's t.selected and hid the track).
 const TRACK_ALPHA = "26";
@@ -229,7 +232,23 @@ export default class Accounts extends View {
     return seconds < 60 ? "updated just now" : `updated ${formatCountdown(seconds * 1000)} ago`;
   }
 
+  addButton(t) {
+    return this.smallButton(t, "add-account", "+ Add", (_e, cx) => {
+      cx.stop_propagation();
+      if (checking()) return;
+      // The tab runs in the interactive shell, which stays open so the result stays readable.
+      run("tab.new", { name: ADD_TAB_NAME, argv: ["/bin/bash", `${appHome()}/${ADD_SCRIPT}`] });
+    });
+  }
+
   switchButton(t, number, id) {
+    return this.smallButton(t, id, "Switch", (_e, cx) => {
+      cx.stop_propagation();
+      this.askSwitch(number, cx);
+    });
+  }
+
+  smallButton(t, id, label, onClick) {
     return div()
       .id(id)
       .flex_none()
@@ -244,11 +263,8 @@ export default class Accounts extends View {
       .items_center()
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
-      .on_click((_e, cx) => {
-        cx.stop_propagation();
-        this.askSwitch(number, cx);
-      })
-      .child("Switch");
+      .on_click(onClick)
+      .child(label);
   }
 
   barColor(t, row, w) {
@@ -384,7 +400,8 @@ export default class Accounts extends View {
             .border_color(t.border)
             .child(div().font_semibold().text_size(13).child("Accounts"))
             .child(div().flex_1())
-            .child(div().text_size(11).text_color(t.dim).child(view ? this.ageText(state, now) : "")),
+            .child(div().text_size(11).text_color(t.dim).child(view ? this.ageText(state, now) : ""))
+            .child(this.addButton(t)),
         ),
       )
       .when(narrow && Boolean(limit || this.configError || (error && !view)), (el) => el.child(h_flex().h(22).justify_center().items_center().text_color(t.blocked).child("!")))
