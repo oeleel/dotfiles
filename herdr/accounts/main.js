@@ -14,6 +14,9 @@ const CONFIG_FILE = `mods/${MOD}/config.json`;
 // cswap list may fetch usage for every account before it answers.
 const LIST_TIMEOUT_MS = 60_000;
 const SWITCH_TIMEOUT_MS = 60_000;
+// /usr/bin/env exits 127 when it cannot find the program: cswap is not installed yet.
+const NOT_FOUND_EXIT = 127;
+const INSTALL_HINT = "cswap is not installed: run uv tool install claude-swap, then cswap add";
 // The confirm dialog's Yes runs `accounts.switch-<N>`. nextCommand() hands over only the
 // command's name, so the account number rides in it. The prefix is optional because the
 // delivered form (with or without "accounts.") is not confirmed.
@@ -111,6 +114,7 @@ export default class Accounts extends View {
     try {
       const r = await exec(cmd, args, { timeout: LIST_TIMEOUT_MS });
       // A missing cswap prints only to stderr ("env: ...: No such file or directory").
+      if (r.code === NOT_FOUND_EXIT) throw new Error(INSTALL_HINT);
       if (r.code !== 0 && !r.stdout.trim()) throw new Error(`cswap list exited ${r.code}: ${r.stderr.trim() || "no output"}`);
       this.view = parseList(r.stdout, this.config);
       this.polledAt = Date.now();
