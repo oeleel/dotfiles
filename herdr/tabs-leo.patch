@@ -1,0 +1,108 @@
+--- a/main.js
++++ b/main.js
+@@ -1,6 +1,8 @@
+ import { View, div, svg, image } from "gpui-kit";
+ import { h_flex, ScrollHandle } from "gpui-base";
+-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
++import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings, setShared, exec, home, appHome, readTextFile, notify, playSound, checking } from "herdr";
++import { readConfig, tick, STATE_KEY, SWITCHED_AT_KEY } from "./core.js";
++import { tabModel, errorModel } from "./tab.js";
+ 
+ function find(node, id) {
+   if (node?.id === id) return node;
+@@ -28,14 +30,71 @@
+ }
+ 
+ export default class Tabs extends View {
+-  init() {
++  init(_props, cx) {
+     this.pressed = null;
+     this.scroll = ScrollHandle.new();
+     try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
+     if (!this.panels || typeof this.panels !== "object" || Array.isArray(this.panels)) this.panels = {};
+     this.swipe = { acc: 0, steps: 0, at: 0, last: 0 };
++    this.accountsConfig = null;
++    this.accountsError = null;
++    this.accountsTicking = false;
++    // The tab bar always runs, so it polls cswap for the accounts panel too (core.js tick).
++    // A check runs init for real: no cswap there.
++    if (checking()) return;
++    cx.spawn((cx) => this.startAccounts(cx));
+   }
+ 
++  // Reads the accounts config, then ticks now and every pollSeconds. A failure shows on the
++  // Accounts button as level error and never reaches the rest of the tab bar.
++  async startAccounts(cx) {
++    this.accountsDeps = { exec, home: home(), appHome: appHome(), readTextFile, shared, setShared, notify, playSound, now: () => Date.now() };
++    try {
++      this.accountsConfig = await readConfig(this.accountsDeps);
++    } catch (e) {
++      this.setAccountsError(e, cx);
++      return;
++    }
++    cx.notify();
++    this.tickAccounts(cx);
++    cx.timer.every(this.accountsConfig.pollSeconds * 1000, (cx) => this.tickAccounts(cx));
++  }
++
++  // Only while the layout has an accounts block. tick's setShared re-renders every mod.
++  tickAccounts(cx) {
++    if (this.accountsTicking || !find(layout(), "accounts")) return;
++    this.accountsTicking = true;
++    cx.spawn(async (cx) => {
++      try {
++        await tick(this.accountsDeps, this.accountsConfig);
++        this.setAccountsError(null, cx);
++      } catch (e) {
++        this.setAccountsError(e, cx);
++      } finally {
++        this.accountsTicking = false;
++      }
++    });
++  }
++
++  // Redraws and logs only when the error changes: every redraw of a mod redraws the whole window.
++  setAccountsError(e, cx) {
++    const error = e === null ? null : e?.message ?? String(e);
++    if (error === this.accountsError) return;
++    if (error) console.log(`tabs-leo: accounts: ${error}`);
++    this.accountsError = error;
++    cx.notify();
++  }
++
++  // Until the config loads (and in a check) there is no state to show.
++  accountsModel() {
++    if (this.accountsError) return errorModel(this.accountsError);
++    try {
++      return tabModel(this.accountsConfig ? shared(STATE_KEY) : null, this.accountsConfig, shared(SWITCHED_AT_KEY), Date.now());
++    } catch (e) {
++      return errorModel(e);
++    }
++  }
++
+   // One tab per wheel notch. A touchpad or smooth-scrolling mouse sends many
+   // small events per gesture: a short swipe or one smoothed notch (about
+   // 25 px) switches one tab, a longer swipe keeps going a tab per 60 px, at
+@@ -130,7 +189,11 @@
+       : 10;
+     const panel = find(root, "panel"), body = find(root, "panel-body");
+     const enabled = shared("workspace.panels") ?? ["files", "changes"];
+-    this.syncPanel(space, panel, body, enabled);
++    // The Accounts button opens its block in the panel stack, so it shows only when the stack has one.
++    const accounts = find(body, "accounts") ? this.accountsModel() : null;
++    // ok keeps the button's own color; none and error have no percent.
++    const accountsColor = { near: t.ansi3, limit: t.blocked }[accounts?.level];
++    this.syncPanel(space, panel, body, accounts ? [...enabled, "accounts"] : enabled);
+     const panelButton = (id, label, icon) => {
+       const on = panel && !panel.hidden && body?.active === id;
+       return h_flex().id(`panel-${id}`).h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+@@ -150,6 +213,9 @@
+       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
+       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
+       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
++      .when(Boolean(accounts), el => el.child(panelButton("accounts", accounts.label, "mods/tabs-leo/account.svg")
++        .when(Boolean(accounts.pct), b => b.child(div().when(Boolean(accountsColor), d => d.text_color(accountsColor)).child(accounts.pct)))
++        .when(Boolean(accounts.tip), b => b.tooltip(accounts.tip))))
+       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs-leo/win-min.svg").size(16) : "−", () => run("window.minimize")))
+         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs-leo/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
+         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs-leo/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
