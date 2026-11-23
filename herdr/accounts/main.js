@@ -125,7 +125,7 @@ export default class Accounts extends View {
   async readStops() {
     let error = null;
     try {
-      this.markers = await readMarkers(home());
+      this.markers = await readMarkers(exec, home());
     } catch (e) {
       this.markers = [];
       error = `limit-stop markers: ${message(e)}`;
@@ -156,7 +156,7 @@ export default class Accounts extends View {
 
   // The stopped agents a switch would resume now, by name, for the confirm dialog.
   async stoppedAgents() {
-    const markers = await readMarkers(home());
+    const markers = await readMarkers(exec, home());
     if (!markers.length) return [];
     const live = agents();
     const targets = resumeTargets(markers, live, await loadSessionTerminals(exec, home()));
@@ -256,9 +256,9 @@ export default class Accounts extends View {
   // Targets come only from resumeTargets: a prompt never goes to a terminal the limit did not stop.
   async resume() {
     try {
-      const markers = await readMarkers(home());
+      const markers = await readMarkers(exec, home());
       const targets = resumeTargets(markers, agents(), await loadSessionTerminals(exec, home()));
-      const results = await resumeAll(targets, { hc, home: home(), prompt: this.config.resumePrompt });
+      const results = await resumeAll(targets, { hc, exec, home: home(), prompt: this.config.resumePrompt });
       for (const r of results) console.log(`accounts: resume ${r.terminal} (session ${r.session_id}): ${r.ok ? "sent" : "failed"} ${r.detail ?? ""}`);
       return { markers: markers.length, results, error: null };
     } catch (e) {
