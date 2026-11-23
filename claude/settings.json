@@ -68,6 +68,27 @@
             "statusMessage": "Checkpoint commit..."
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/limit-stop-marker.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "matcher": "rate_limit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/limit-stop-marker.sh",
+            "timeout": 10
+          }
+        ]
       }
     ]
   },
