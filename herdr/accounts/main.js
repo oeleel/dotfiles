@@ -24,6 +24,9 @@ const CONFIRM_SIZE = { width: 440, height: 240 };
 const NARROW_PX = 160;
 // The bar grows with the panel up to this, so the reset countdown keeps its room at 280 px.
 const BAR_MAX_PX = 140;
+// The empty part of a bar: a faint foreground shows on every row background (t.raised matched
+// the active row's t.selected and hid the track).
+const TRACK_ALPHA = "26";
 const FULL_PERCENT = 100;
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -264,7 +267,7 @@ export default class Accounts extends View {
       .items_center()
       .text_size(11)
       .child(div().w(16).flex_none().text_color(t.dim).child(w.name))
-      .child(div().flex_1().max_w(BAR_MAX_PX).h(4).rounded(2).bg(t.raised).child(div().w(`${fill}%`).h(4).rounded(2).bg(this.barColor(t, row, w))))
+      .child(div().flex_1().max_w(BAR_MAX_PX).h(4).rounded(2).bg(t.foreground + TRACK_ALPHA).child(div().w(`${fill}%`).h(4).rounded(2).bg(this.barColor(t, row, w))))
       .child(div().w(30).flex_none().text_right().text_color(row.stale ? t.dim : t.muted).child(w.pct === null ? "?" : `${Math.round(w.pct)}%`))
       .child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(resets));
   }
