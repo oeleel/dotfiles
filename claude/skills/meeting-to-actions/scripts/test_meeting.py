@@ -275,6 +275,23 @@ def test_todo_counts_sections_and_owners(
     assert "L7 [Leo] **Leo:** confirm the Monday meeting" in out
 
 
+def test_records_flags_notes_in_two_places(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    meeting.main(["records", str(repo)])
+    assert "conflict: meeting notes in 2 places" in capsys.readouterr().out
+
+
+def test_todo_counts_added_items_as_proposed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    todo = "# Todo\n\n## 1. Runs\n- [ ] Rerun the hindcast\n- [ ] Try a new loss (added)\n"
+    meeting.main(["todo", str(write(tmp_path, "todo.md", todo))])
+    out = capsys.readouterr().out
+    assert "open: 1 agent, 1 proposed" in out
+    assert "[proposed] Try a new loss (added)" in out
+
+
 def test_todo_fails_without_checkboxes(tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match="has no checkbox items"):
         meeting.main(["todo", str(write(tmp_path, "plain.md", "# Notes\n- a bullet\n"))])

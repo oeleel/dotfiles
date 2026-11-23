@@ -20,13 +20,15 @@ Script: `~/.claude/skills/meeting-to-actions/scripts/meeting.py` (`--help` lists
 1. **Locate.** Run `date`. Run `meeting.py records <repo>`. It prints the repo's meeting
    rules, ignore rules, meeting folders (tracked or local only), recent todo files, and the
    `<repo>-private` sibling with its README. Read every rule file it names before you
-   write. A repo rule beats this skill.
+   write. A repo rule beats this skill. A `conflict:` line means two places hold notes:
+   follow the rule file and list the conflict for Leo.
 2. **Capture.** Run `meeting.py paste --list` to see each paste and the words Leo typed
    after it ("sept 9", "aug 27"). Pick the transcript and save it verbatim to a local-only
    path as `YYYY-MM-DD-<who>-transcript.txt` (see "Where things go"):
    `meeting.py paste --index <n> --out <path>`. The script refuses a path that git could
-   publish. Then run `meeting.py profile <path>`. Do not read the saved file back: the
-   paste is already in the conversation.
+   publish. A paste from another tab: add `--session <id prefix>`. Then run
+   `meeting.py profile <path>`. Read the saved file only when the paste is not in this
+   conversation (another session, or a compaction hid it).
 3. **Fix the facts first.**
    - Speakers: map every generic label (`Me`, `Them`, `You`, `Speaker 1`) to a person, with
      evidence. `Me` is whoever ran Granola, which is not always Leo. On 2026-11-20 it was
@@ -34,6 +36,7 @@ Script: `~/.claude/skills/meeting-to-actions/scripts/meeting.py` (`--help` lists
    - Meeting date: the header, Leo's words, or the paste time, in that order. Say which.
    - Next meeting: an absolute date and time. Take it from the transcript, or read Google
      Calendar if the transcript is vague. Count the working hours until then from `date`.
+     With neither, write "unknown" and add it to "Please confirm". Never guess a date.
    - End of the paste: if `profile` reports lines after the last goodbye, check them.
 4. **Read the context.** Read the newest earlier meeting note and the last todo; their open
    items are carry-over candidates. Read the other pastes (Teams messages, older
@@ -135,7 +138,8 @@ Mark a finished item with `[x]` and its proof.
 ```
 
 `meeting.py todo` reads this layout. An item that starts with "Leo" or "Ask" belongs to
-Leo. A "Waiting" section belongs to others. Everything else is agent work.
+Leo. A "Waiting" section belongs to others. An "(added)" item is `proposed`: run it only
+after Leo accepts it. Everything else is agent work.
 
 ## Rules
 

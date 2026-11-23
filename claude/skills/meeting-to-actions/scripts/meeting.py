@@ -97,6 +97,7 @@ EDGE_LINES = 2
 HEADING_RE = re.compile(r"^#{1,4}\s+(.*)$")
 ITEM_RE = re.compile(r"^\s*[-*]\s+\[([ xX])\]\s+(.*)$")
 WAITING_SECTION_RE = re.compile(r"waiting", re.I)
+ADDED_RE = re.compile(r"\(added\)", re.I)
 LEO_ITEM_RE = re.compile(r"^(\*\*)?(leo\b|ask\b)", re.I)
 
 # An opening mark is not glued to a word on its left and a quote does not start or end with a
@@ -475,8 +476,10 @@ def visibility(root: Path, folder: Path, in_git: bool) -> str:
     return "tracked by git, pushed with the repo"
 
 
-def print_folders(root: Path, tree: list[tuple[Path, list[str]]], in_git: bool) -> None:
+def print_folders(root: Path, tree: list[tuple[Path, list[str]]], in_git: bool) -> list[Path]:
+    """Print each meeting folder; return the ones that hold files."""
     print("meeting folders:")
+    used = []
     folders = [d for d, _ in tree if MEETING_DIR_RE.match(d.name)]
     for folder in folders:
         files = sorted(
@@ -490,8 +493,11 @@ def print_folders(root: Path, tree: list[tuple[Path, list[str]]], in_git: bool) 
         )
         for file in files[:NEWEST_FILES_SHOWN]:
             print(f"    {date_of(file)}  {file.name}")
+        if files:
+            used.append(folder)
     if not folders:
         print("  none")
+    return used
 
 
 def print_todos(root: Path, tree: list[tuple[Path, list[str]]]) -> None:
@@ -508,14 +514,22 @@ def print_todos(root: Path, tree: list[tuple[Path, list[str]]]) -> None:
         print("  none")
 
 
-def print_records(root: Path) -> None:
+def print_records(root: Path) -> list[Path]:
+    """Print the record layout of one folder; return its meeting folders that hold files."""
     in_git = git_root(root) is not None  # a notes folder can sit inside another repo
     tree = walk(root)
     print_rule_lines(root, tree)
     if in_git:
         print_ignore_lines(root)
-    print_folders(root, tree, in_git)
+    used = print_folders(root, tree, in_git)
     print_todos(root, tree)
+    return used
+
+
+def print_conflict(used: list[Path]) -> None:
+    # Two folders that both hold notes leave the record ambiguous; the skill has Leo settle it.
+    if len(used) > 1:
+        print(f"\nconflict: meeting notes in {len(used)} places: {', '.join(str(f) for f in used)}")
 
 
 def run_records(args: argparse.Namespace) -> None:
@@ -524,17 +538,19 @@ def run_records(args: argparse.Namespace) -> None:
         fail(f"no such directory: {start}")
     root = git_root(start) or start
     print(f"repo: {root}" + ("" if git_root(start) else " (not a git repo)"))
-    print_records(root)
+    used = print_records(root)
     # Leo's rule: private notes about a shared repo live in a <repo>-private sibling folder.
     private = root.parent / f"{root.name}-private"
     if not private.is_dir():
         print(f"\nprivate sibling: {private} does not exist")
+        print_conflict(used)
         return
     print(
         f"\nprivate sibling: {private}"
         + (" (own git repo)" if git_root(private) == private else " (not a git repo)")
     )
-    print_records(private)
+    used += print_records(private)
+    print_conflict(used)
 
 
 # ---------------------------------------------------------------- todo
@@ -556,6 +572,8 @@ def read_todo(path: Path) -> list[TodoItem]:
             owner = "others"
         elif LEO_ITEM_RE.match(text):
             owner = "Leo"
+        elif ADDED_RE.search(text):
+            owner = "proposed"  # the agent's own idea, not an ask: it waits for Leo's yes
         else:
             owner = "agent"
         items.append(TodoItem(n, item.group(1) in "xX", text, section, owner))
@@ -577,7 +595,7 @@ def run_todo(args: argparse.Namespace) -> None:
     owners = Counter(item.owner for item in open_items)
     print(
         f"total: {len(items) - len(open_items)}/{len(items)} done; open: "
-        + ", ".join(f"{owners[o]} {o}" for o in ("agent", "Leo", "others") if owners[o])
+        + ", ".join(f"{owners[o]} {o}" for o in ("agent", "proposed", "Leo", "others") if owners[o])
     )
     for item in open_items:
         print(f"  L{item.line} [{item.owner}] {clip(item.text, OPEN_ITEM_CHARS)}")
