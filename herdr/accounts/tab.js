@@ -19,6 +19,7 @@ import { activeAtLimit, markersSince, windowWord, formatCountdown } from "./acco
 const LABEL = "Accounts";
 const WAITING_TIP = "No account usage yet: the first cswap poll has not finished";
 const NO_ACTIVE_TIP = "cswap reports no active account";
+const LIMIT_TEXT = "limit";
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const model = (pct, level, tip) => Object.freeze({ label: LABEL, pct, level, tip });
@@ -45,11 +46,14 @@ export function tabModel(state, config, switchedAt, nowMs) {
   const top = highest(row.windows);
   const limit = activeAtLimit(state.view, markersSince(state.markers, switchedAt ?? 0));
   const level = limit ? "limit" : top && top.pct >= config.roomPercent ? "near" : "ok";
-  const pct = top ? `${Math.round(top.pct)}%` : null;
+  // A limit-stop marker can arrive minutes before cswap's next reading, so a stale percent
+  // under 100 would look like room: the button says "limit" until cswap catches up.
+  const percent = top ? `${Math.round(top.pct)}%` : null;
+  const pct = limit && !(top && top.pct >= 100) ? LIMIT_TEXT : percent;
   const tip = [
     `Account ${row.number}`,
     row.label,
-    top && `${top.name} ${pct}`,
+    top && `${top.name} ${percent}`,
     top?.resetsAtMs != null && `resets ${formatCountdown(top.resetsAtMs - nowMs)}`,
     limit && `hit its ${windowWord(limit.window)} limit`,
     limit?.stopped && `${plural(limit.stopped, "agent")} stopped`,

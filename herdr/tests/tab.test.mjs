@@ -70,7 +70,7 @@ test("test_tab_model_full_window_is_limit", () => {
 test("test_tab_model_limit_stop_marker_after_the_switch_is_limit", () => {
   const model = tabModel(MARKED_STATE, CONFIG, SWITCHED_BEFORE_MARKER, NOW);
 
-  assert.deepEqual(model, { label: "Accounts", pct: "40%", level: "limit", tip: "Account 1 · main@example.com · 7d 40% · resets 2d10h · hit its weekly limit · 1 agent stopped" });
+  assert.deepEqual(model, { label: "Accounts", pct: "limit", level: "limit", tip: "Account 1 · main@example.com · 7d 40% · resets 2d10h · hit its weekly limit · 1 agent stopped" });
 });
 
 test("test_tab_model_without_a_switch_time_counts_every_marker", () => {

@@ -114,7 +114,7 @@ build_clone() {
     return
   fi
   rm -f "${built:?}"/*.orig
-  rsync -a "$modules_dir/" "$built/"
+  rsync -a --exclude ".*" "$modules_dir/" "$built/"
   if [ $# -gt 0 ]; then cp "$@" "$built/"; fi
   install_mod "$built" "$APP_HOME/mods/$clone"
 }
