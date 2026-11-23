@@ -13,6 +13,12 @@ export const MARKER_DIR = ".local/state/claude-limit-stops";
 /** Every readable marker under `${home}/${MARKER_DIR}`. A missing folder is an empty list. */
 export async function readMarkers(home) { throw new Error("not built: readMarkers"); }
 
+/** Map session_id -> Herdr terminal address for the running Claude sessions, from
+ *  ~/.claude/sessions/<pid>.json (field `sessionId`) and `ps -E` (HC_TERMINAL_ID), the method of
+ *  herdr/agents-menu/sessions.js. A mod cannot import another mod's files, so this keeps its own
+ *  copy of that logic. `exec` is Herdr's (or a stand-in). */
+export async function loadSessionTerminals(exec, home) { throw new Error("not built: loadSessionTerminals"); }
+
 /** Markers whose terminal is a live agent in `agents` (Herdr's agents()) with status idle or
  *  done. A marker with terminal null is matched through `sessionTerminals`
  *  (Map session_id -> terminal address). */
