@@ -9,6 +9,7 @@ import pytest
 import audit
 
 SESSION_ID = "cafe1234-0000-0000-0000-000000000000"
+IMAGE_B64 = "aW1hZ2UgYnl0ZXM="  # b"image bytes"
 TRANSCRIPT = (
     "Me: We want to get all of the relevant articles. And like, if I only tracked 20% of the sources, "
     "which 20 would be the best, for example? Any trending GitHub repositories, things that researchers "
@@ -32,7 +33,7 @@ Source: call 2026-11-20. Checked against: `pipeline/` at `{sha}`.
 """
 
 
-def user(stamp: str, text: str, **flags: object) -> dict:
+def user(stamp: str, text: str | list[dict], **flags: object) -> dict:
     return {"type": "user", "timestamp": f"2026-11-22T{stamp}:00Z", "message": {"content": text}, **flags}
 
 
@@ -46,6 +47,10 @@ SESSION_ENTRIES = [
     user("06:57", "skill body " + paste("meta", "not a paste Leo typed"), isMeta=True),
     user("06:58", "the rubric: " + paste("r1", "Rubric row 1. Hook & MVP Validation")),
     user("06:59", "so can we make sure all of our bases are covered"),
+    user("07:00", [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": IMAGE_B64}},
+                   {"type": "text", "text": "[Image #1] this was the red team report"}]),
+    user("07:01", [{"type": "tool_result", "tool_use_id": "t1",
+                    "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "c2hvdA=="}}]}]),
 ]
 
 
@@ -98,6 +103,26 @@ def test_source_index_shows_time_size_and_preview(saved: tuple[list[str], Path])
 def test_source_skips_meta_entries(saved: tuple[list[str], Path]) -> None:
     _, out_dir = saved
     assert "not a paste Leo typed" not in "\n".join(p.read_text() for p in out_dir.iterdir())
+
+
+def test_source_saves_pasted_images_but_not_tool_screenshots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    transcript = tmp_path / "projects" / "-Users-leo-firehose" / f"{SESSION_ID}.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text("\n".join(json.dumps(e) for e in SESSION_ENTRIES) + "\n")
+    monkeypatch.setattr(audit, "PROJECTS_DIR", tmp_path / "projects")
+
+    lines = audit.save_images(audit.session_images(audit.find_transcript("cafe12")), tmp_path / "out")
+
+    assert len(lines) == 1
+    assert (tmp_path / "out" / "image-1.png").read_bytes() == b"image bytes"
+
+
+def test_check_accepts_a_finding_number_as_evidence_for_a_covered_row(repo: tuple[Path, str]) -> None:
+    text = GOOD_AUDIT.replace(
+        "Daily run collects every source: `pipeline/collect.py`, commit `{sha}`", "Response PDF, finding 7: fixed."
+    )
+    problems, _ = run_check(text, repo)
+    assert problems == []
 
 
 def test_source_fails_loudly_on_an_unknown_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

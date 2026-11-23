@@ -17,6 +17,7 @@ Default session: $CLAUDE_CODE_SESSION_ID (set by Claude Code in every Bash call)
 """
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -52,7 +53,8 @@ HEADLINE_RE = re.compile(r"\b(\d+) asks?:(.*)$", re.M)  # "No. 24 asks: 2 covere
 HEADLINE_COUNT_RE = re.compile(r"(\d+) (covered|partial|missing|unverified|n/a)\b")
 TARGET_RE = re.compile(r"^.*checked against:(.*)$", re.I | re.M)
 # A place inside the named target ("Slide 7", "p. 4", "section 3.1") also points at evidence.
-LOCATION_RE = re.compile(r"\b(?:slides?|p\.|pages?|sections?|§|rows?|lines?|steps?)\s*\d+", re.I)
+LOCATION_RE = re.compile(r"\b(?:slides?|p\.|pages?|sections?|§|rows?|lines?|steps?|findings?|items?|questions?)\s*\d+", re.I)
+IMAGE_SUFFIXES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp"}
 ID_SPLIT_RE = re.compile(r"\s*(?:,|;|\band\b|\s)\s*")
 PART_RE = re.compile(r"^([A-Za-z]*\d+)[a-z]$")  # 5a -> 5, L3b -> L3
 
@@ -100,6 +102,35 @@ def session_pastes(transcript: Path) -> list[tuple[str, str]]:
         for body in PASTE_RE.findall(message_text(entry)):
             pastes.setdefault(body.strip("\n"), entry.get("timestamp", ""))
     return [(stamp, body) for body, stamp in pastes.items()]
+
+
+def session_images(transcript: Path) -> list[tuple[str, str, bytes]]:
+    """Every distinct image Leo pasted (a rubric or report screenshot), as (UTC timestamp,
+    media type, bytes). Images inside tool results are the agent's own screenshots: skipped."""
+    images: dict[str, tuple[str, str]] = {}
+    for line in transcript.read_text(encoding="utf-8").splitlines():
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = (entry.get("message") or {}).get("content")
+        if entry.get("type") != "user" or entry.get("isMeta") or not isinstance(content, list):
+            continue
+        for block in content:
+            source = block.get("source") if isinstance(block, dict) and block.get("type") == "image" else None
+            if isinstance(source, dict) and source.get("type") == "base64" and source.get("data"):
+                images.setdefault(source["data"], (entry.get("timestamp", ""), source.get("media_type", "image/png")))
+    return [(stamp, media, base64.b64decode(data)) for data, (stamp, media) in images.items()]
+
+
+def save_images(images: list[tuple[str, str, bytes]], out_dir: Path) -> list[str]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for number, (stamp, media, data) in enumerate(images, start=1):
+        path = out_dir / f"image-{number}{IMAGE_SUFFIXES.get(media, '.png')}"
+        path.write_bytes(data)
+        lines.append(f"{path}  {stamp[:16]}  {len(data)} bytes  image: read it and transcribe it to image-{number}.txt")
+    return lines
 
 
 def save_pastes(pastes: list[tuple[str, str]], out_dir: Path) -> list[str]:
@@ -406,7 +437,7 @@ def check_gaps(tables: list[Table], open_ids: set[str]) -> list[str]:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
-    source = commands.add_parser("source", help="save every paste of a session to OUT_DIR/paste-N.txt")
+    source = commands.add_parser("source", help="save every paste and pasted image of a session to OUT_DIR")
     source.add_argument("out_dir", type=Path)
     source.add_argument("--session", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
     check = commands.add_parser("check", help="check an audit markdown file")
@@ -426,10 +457,11 @@ def main(argv: list[str]) -> int:
     if args.command == "source":
         if not args.session:
             raise SystemExit("no session: pass --session PREFIX or run inside Claude Code ($CLAUDE_CODE_SESSION_ID)")
-        pastes = session_pastes(find_transcript(args.session))
-        if not pastes:
-            raise SystemExit(f"session {args.session!r} has no pastes; save the source to a text file by hand")
-        print("\n".join(save_pastes(pastes, args.out_dir)))
+        transcript = find_transcript(args.session)
+        pastes, images = session_pastes(transcript), session_images(transcript)
+        if not pastes and not images:
+            raise SystemExit(f"session {args.session!r} has no pastes or images; save the source to a text file by hand")
+        print("\n".join(save_pastes(pastes, args.out_dir) + save_images(images, args.out_dir)))
         return 0
 
     for path in [args.audit, *args.source]:

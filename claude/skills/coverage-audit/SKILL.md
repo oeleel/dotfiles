@@ -18,7 +18,9 @@ Optional argument: the source and the target (`/coverage-audit the rubric agains
 1. **Get the source itself.** Make a scratch folder in the session scratchpad.
    - Pasted in this session: run
      `python3 ~/.claude/skills/coverage-audit/scripts/audit.py source <scratch>`. It saves
-     each paste word for word as `paste-<n>.txt` and prints an index. Pick the source. Run
+     each paste word for word as `paste-<n>.txt`, and each pasted image (a screenshot of a
+     rubric or a report) as `image-<n>.png`, and prints an index. Read each image and
+     transcribe it word for word to `image-<n>.txt`; that file is the source. Pick the source. Run
      it even when you think nothing was pasted: a compaction hides old pastes (cs4501,
      2026-11-05: the agent said it had no rubric, but Leo had pasted it 7 hours before).
    - A file or a doc: read all of it (`pdftotext -layout` for a PDF). Save the text in the
@@ -55,6 +57,8 @@ Optional argument: the source and the target (`/coverage-audit the rubric agains
 4. **Find the evidence for each row.** Open the file, read the slide, run the test, load
    the page. Put each file, commit, command, and link in backticks. A slide, page, or
    section number points into the target. Cite a line number only from a line you printed.
+   Write a file as its full path from the repo root (`src/app/SlotOptions.tsx`); `check`
+   cannot find a bare file name.
    - A claim is not evidence: a decision record, a commit message, a status page, an
      agent report, a teammate's message. Its row is unverified until you open or run the
      thing it describes.
