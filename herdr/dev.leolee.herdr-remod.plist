@@ -15,7 +15,8 @@
     <key>HERDR_REMOD_SETTLE_SECONDS</key>
     <string>3</string>
   </dict>
-  <!-- Herdr rewrites the shipped files when it starts after an update. -->
+  <!-- Herdr rewrites the shipped files when it starts after an update. The accounts folder
+       catches a file that is added or removed; each file catches an edit in place. -->
   <key>WatchPaths</key>
   <array>
     <string>/Users/leolee/.config/herdr-app/installed.json</string>
@@ -24,6 +25,12 @@
     <string>/Users/leolee/.config/herdr-app/layouts/main.json</string>
     <string>/Users/leolee/dotfiles/herdr/agents-menu.patch</string>
     <string>/Users/leolee/dotfiles/herdr/agents-menu/sessions.js</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/mod.json</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/config.json</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/main.js</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/accounts.js</string>
+    <string>/Users/leolee/dotfiles/herdr/accounts/resume.js</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

@@ -1,25 +1,37 @@
 #!/bin/bash
-# Rebuild the personal Herdr agents panel from the shipped one.
+# Rebuild the personal Herdr agents panel from the shipped one, and install the accounts panel.
 #
 # Herdr replaces its shipped mods and layouts on every update, and it never updates a
 # clone. This script makes the clones follow the shipped files: it copies the shipped
 # `agents` mod, applies agents-menu.patch (the right-click menu and the session-name hover),
 # adds the patch's own modules from agents-menu/, and copies the shipped `main` layout with
-# its agents block pointed at the patched mod.
+# its agents block pointed at the patched mod. It also installs Leo's own `accounts` mod from
+# accounts/ (without the fixtures and tests) and adds its block under the agents block, so the
+# layout keeps the accounts panel after every Herdr update.
 #
-# The launchd job dev.leolee.herdr-remod runs it when Herdr rewrites the shipped files.
-# It writes nothing when the result is already installed. On a failure it keeps the
-# installed clone, posts a notification, and exits 1.
+# The launchd job dev.leolee.herdr-remod runs it when Herdr rewrites the shipped files or a
+# source file here changes. It writes nothing when the result is already installed. The
+# three parts (the agents-menu mod, the accounts mod, the layout) stand alone: a part that
+# fails keeps its installed copy and posts a notification, the other parts still go in, and
+# the run exits 1. The layout names only mods that are installed.
 set -euo pipefail
 
 readonly APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
-readonly PATCH_FILE="$(cd "$(dirname "$0")" && pwd)/agents-menu.patch"
+readonly SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly PATCH_FILE="$SOURCE_DIR/agents-menu.patch"
 # Modules the patch imports, copied into the mod as they are.
-readonly MODULES_DIR="$(cd "$(dirname "$0")" && pwd)/agents-menu"
+readonly MODULES_DIR="$SOURCE_DIR/agents-menu"
 readonly SHIPPED_MOD="agents"
 readonly MOD="agents-menu"
 readonly SHIPPED_LAYOUT="main"
 readonly LAYOUT="main-leo"
+readonly ACCOUNTS_SOURCE_DIR="$SOURCE_DIR/accounts"
+readonly ACCOUNTS_MOD="accounts"
+# Only the tests read these; the app never does.
+readonly ACCOUNTS_TEST_ONLY=(fixtures '*.test.*')
+# The accounts block goes right after the agents block in this column.
+readonly SIDEBAR_COLUMN="sidebar-lists"
+readonly ACCOUNTS_BLOCK='{"id":"accounts","type":"block","size":{"weight":0.6},"min":110,"content":{"mod":"accounts"}}'
 # Herdr writes these into every mod folder; they are not part of the mod.
 readonly APP_WRITTEN=(gpui-kit.d.ts jsconfig.json)
 # Herdr rewrites several shipped files in a row; wait until it is done.
@@ -27,10 +39,12 @@ readonly SETTLE_SECONDS="${HERDR_REMOD_SETTLE_SECONDS:-0}"
 
 export PATH="$HOME/.local/bin:/usr/bin:/bin"
 
-fail() {
+failed=false
+# One part failed: say so now, and let the other parts go on.
+warn() {
   echo "herdr-remod: $1" >&2
   osascript -e "display notification \"$1\" with title \"Herdr panel rebuild failed\"" >/dev/null 2>&1 || true
-  exit 1
+  failed=true
 }
 
 sleep "$SETTLE_SECONDS"
@@ -38,56 +52,107 @@ sleep "$SETTLE_SECONDS"
 shipped_mod_dir="$APP_HOME/mods/$SHIPPED_MOD"
 shipped_layout_file="$APP_HOME/layouts/$SHIPPED_LAYOUT.json"
 mod_dir="$APP_HOME/mods/$MOD"
+accounts_dir="$APP_HOME/mods/$ACCOUNTS_MOD"
 layout_file="$APP_HOME/layouts/$LAYOUT.json"
-
-[ -f "$shipped_mod_dir/main.js" ] || fail "shipped mod not found: $shipped_mod_dir/main.js"
-[ -f "$shipped_layout_file" ] || fail "shipped layout not found: $shipped_layout_file"
-[ -f "$PATCH_FILE" ] || fail "patch not found: $PATCH_FILE"
-[ -d "$MODULES_DIR" ] || fail "patch modules not found: $MODULES_DIR"
 
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
 built_mod_dir="$build_dir/$MOD"
+built_accounts_dir="$build_dir/$ACCOUNTS_MOD"
+renamed_layout_file="$build_dir/$LAYOUT.renamed.json"
 built_layout_file="$build_dir/$LAYOUT.json"
 
 excludes=()
 for name in "${APP_WRITTEN[@]}"; do excludes+=(--exclude "$name"); done
-
-# The mod: the shipped files, renamed as `mod.clone` renames them, plus the patch.
-rsync -a "${excludes[@]}" "$shipped_mod_dir/" "$built_mod_dir/"
-for script in "$built_mod_dir"/*.js; do
-  sed -e "s#mods/$SHIPPED_MOD/#mods/$MOD/#g" -e "s#mod: \"$SHIPPED_MOD\"#mod: \"$MOD\"#g" "$script" > "$script.renamed"
-  mv "$script.renamed" "$script"
-done
-patch --silent --forward --directory "$built_mod_dir" --strip 1 --reject-file - --input "$PATCH_FILE" \
-  || fail "agents-menu.patch does not apply to the shipped $SHIPPED_MOD mod; update the patch"
-rm -f "$built_mod_dir"/*.orig
-cp "$MODULES_DIR"/*.js "$built_mod_dir/"
-
-# The layout: the shipped one with its agents block on the patched mod.
-sed -e "s#\"mod\": \"$SHIPPED_MOD\"\$#\"mod\": \"$MOD\"#" "$shipped_layout_file" > "$built_layout_file"
-block_count="$(grep -c "\"mod\": \"$MOD\"\$" "$built_layout_file" || true)"
-[ "$block_count" = "1" ] || fail "expected 1 $SHIPPED_MOD block in the shipped $SHIPPED_LAYOUT layout, found $block_count"
-
+accounts_excludes=("${excludes[@]}")
+for name in "${ACCOUNTS_TEST_ONLY[@]}"; do accounts_excludes+=(--exclude "$name"); done
 diff_excludes=()
 for name in "${APP_WRITTEN[@]}"; do diff_excludes+=(-x "$name"); done
-mod_current=false
-layout_current=false
-diff -rq "${diff_excludes[@]}" "$built_mod_dir" "$mod_dir" >/dev/null 2>&1 && mod_current=true
-cmp -s "$built_layout_file" "$layout_file" && layout_current=true
-if $mod_current && $layout_current; then exit 0; fi
 
-herdr-app check "$built_mod_dir" >/dev/null 2>"$build_dir/check.log" \
-  || fail "the rebuilt $MOD mod does not pass herdr-app check: $(tr '\n' ' ' < "$build_dir/check.log")"
+# Installs a built mod unless the installed one is already current. A mod that fails
+# herdr-app check keeps its installed copy.
+install_mod() {
+  local built="$1" target="$2" name
+  name="$(basename "$target")"
+  diff -rq "${diff_excludes[@]}" "$built" "$target" >/dev/null 2>&1 && return
+  if ! herdr-app check "$built" >/dev/null 2>"$build_dir/check.log"; then
+    warn "the rebuilt $name mod does not pass herdr-app check: $(tr '\n' ' ' < "$build_dir/check.log")"
+    return
+  fi
+  # rsync replaces each file in one step, so Herdr never reads a half-written file.
+  mkdir -p "$target"
+  rsync -a --delete "${excludes[@]}" "$built/" "$target/"
+  echo "herdr-remod: rebuilt mods/$name"
+}
 
-# rsync and mv replace each file in one step, so Herdr never reads a half-written file.
-if ! $mod_current; then
-  mkdir -p "$mod_dir"
-  rsync -a --delete "${excludes[@]}" "$built_mod_dir/" "$mod_dir/"
-  echo "herdr-remod: rebuilt mods/$MOD"
-fi
-if ! $layout_current; then
+# The agents-menu mod: the shipped files, renamed as `mod.clone` renames them, plus the patch.
+build_agents_menu() {
+  [ -f "$shipped_mod_dir/main.js" ] || { warn "shipped mod not found: $shipped_mod_dir/main.js"; return; }
+  [ -f "$PATCH_FILE" ] || { warn "patch not found: $PATCH_FILE"; return; }
+  [ -d "$MODULES_DIR" ] || { warn "patch modules not found: $MODULES_DIR"; return; }
+  rsync -a "${excludes[@]}" "$shipped_mod_dir/" "$built_mod_dir/"
+  for script in "$built_mod_dir"/*.js; do
+    sed -e "s#mods/$SHIPPED_MOD/#mods/$MOD/#g" -e "s#mod: \"$SHIPPED_MOD\"#mod: \"$MOD\"#g" "$script" > "$script.renamed"
+    mv "$script.renamed" "$script"
+  done
+  if ! patch --silent --forward --directory "$built_mod_dir" --strip 1 --reject-file - --input "$PATCH_FILE"; then
+    warn "agents-menu.patch does not apply to the shipped $SHIPPED_MOD mod; update the patch"
+    return
+  fi
+  rm -f "$built_mod_dir"/*.orig
+  cp "$MODULES_DIR"/*.js "$built_mod_dir/"
+  install_mod "$built_mod_dir" "$mod_dir"
+}
+
+# The accounts mod: Leo's own files as they are.
+build_accounts() {
+  [ -f "$ACCOUNTS_SOURCE_DIR/main.js" ] || { warn "accounts mod not found: $ACCOUNTS_SOURCE_DIR/main.js"; return; }
+  rsync -a "${accounts_excludes[@]}" "$ACCOUNTS_SOURCE_DIR/" "$built_accounts_dir/"
+  install_mod "$built_accounts_dir" "$accounts_dir"
+}
+
+# The layout: the shipped one, built after the mods so it names only installed mods. The
+# agents block stays on the shipped mod until a patched one is installed. The accounts block
+# goes right after it once an accounts mod is installed.
+build_layout() {
+  [ -f "$shipped_layout_file" ] || { warn "shipped layout not found: $shipped_layout_file"; return; }
+  local agents_mod="$SHIPPED_MOD" block_count accounts_count column_mods
+  if [ -f "$mod_dir/main.js" ]; then agents_mod="$MOD"; fi
+  sed -e "s#\"mod\": \"$SHIPPED_MOD\"\$#\"mod\": \"$agents_mod\"#" "$shipped_layout_file" > "$renamed_layout_file"
+  block_count="$(grep -c "\"mod\": \"$agents_mod\"\$" "$renamed_layout_file" || true)"
+  if [ "$block_count" != "1" ]; then
+    warn "expected 1 $SHIPPED_MOD block in the shipped $SHIPPED_LAYOUT layout, found $block_count"
+    return
+  fi
+  if [ -f "$accounts_dir/main.js" ]; then
+    # jq prints the 2-space format Herdr ships, and the same input always gives the same
+    # bytes, so `cmp` below still finds a current layout current.
+    if ! jq --arg column "$SIDEBAR_COLUMN" --arg after "$agents_mod" --argjson block "$ACCOUNTS_BLOCK" '
+      (.. | objects | select(.id == $column) | .children) |=
+        [.[] | ., (select(.content.mod? == $after) | $block)]
+    ' "$renamed_layout_file" > "$built_layout_file" 2>"$build_dir/jq.log"; then
+      warn "jq could not add the $ACCOUNTS_MOD block to the $LAYOUT layout: $(tr '\n' ' ' < "$build_dir/jq.log")"
+      return
+    fi
+    accounts_count="$(jq --arg mod "$ACCOUNTS_MOD" '[.. | objects | select(.content.mod? == $mod)] | length' "$built_layout_file")"
+    if [ "$accounts_count" != "1" ]; then
+      column_mods="$(jq -r --arg column "$SIDEBAR_COLUMN" \
+        '[.. | objects | select(.id == $column) | .children[]? | .content.mod? // .id] | join(", ")' \
+        "$built_layout_file")"
+      warn "expected 1 $ACCOUNTS_MOD block after the $agents_mod block in $SIDEBAR_COLUMN of the $LAYOUT layout, found $accounts_count ($SIDEBAR_COLUMN holds: ${column_mods:-no blocks})"
+      return
+    fi
+  else
+    cp "$renamed_layout_file" "$built_layout_file"
+  fi
+  cmp -s "$built_layout_file" "$layout_file" && return
+  # mv replaces the file in one step, so Herdr never reads a half-written file.
   cp "$built_layout_file" "$layout_file.new"
   mv "$layout_file.new" "$layout_file"
   echo "herdr-remod: rebuilt layouts/$LAYOUT.json"
-fi
+}
+
+build_agents_menu
+build_accounts
+build_layout
+if $failed; then exit 1; fi
