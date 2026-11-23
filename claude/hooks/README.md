@@ -48,3 +48,10 @@ Then open `/hooks` once (or restart) so Claude Code reloads the config.
 Stop hooks run concurrently, so `checkpoint-commit.sh` may autosave a red tree on the first
 stop; the gate then makes the agent fix it and the next stop autosaves the fix. Checkpoints
 are squashed before `main`, so this is harmless.
+
+## Skill scope guard (added 2026-11-22)
+
+- **`guard-n2o-skills.sh`** - `PreToolUse` on `Skill`, registered globally. Denies Claude's
+  own call to a third-party design skill (`design-taste-frontend`) when the session runs
+  under `~/N2O`, where the n2o-kit skills own page design. A typed `/design-taste-frontend`
+  bypasses `PreToolUse` and still runs.
