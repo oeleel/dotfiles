@@ -39,6 +39,11 @@ def queued(stamp: str, content: str) -> dict:
     return {"type": "queue-operation", "operation": "enqueue", "timestamp": f"2026-11-22T{stamp}:00Z", "content": content}
 
 
+def attached(stamp: str, prompt: str) -> dict:
+    attachment = {"type": "queued_command", "prompt": prompt}
+    return {"type": "attachment", "timestamp": f"2026-11-22T{stamp}:00Z", "attachment": attachment}
+
+
 def said(stamp: str, text: str) -> dict:
     return {"type": "assistant", "timestamp": f"2026-11-22T{stamp}:00Z", "message": {"content": [{"type": "text", "text": text}]}}
 
@@ -76,6 +81,9 @@ SESSION_ENTRIES = [
     tool_use("10:09", "t6", "Agent", {"description": "Cluster the prompts", "prompt": "..."}),
     queued("10:10", NOTIFICATION),
     user("10:10", NOTIFICATION),
+    attached("10:10", NOTIFICATION),
+    attached("10:10", "after that, run it while I sleep"),
+    attached("10:15", NOTIFICATION.replace("Run the page tests", "Run the pipeline suite")),
     queued("10:11", AGENT_REPORT),
     queued("10:12", PEER_MESSAGE),
     tool_use("10:13", "t8", "CronCreate", {"cron": "17 */2 * * *", "prompt": "check in"}),
@@ -83,6 +91,8 @@ SESSION_ENTRIES = [
     user("11:00", SUMMARY, isCompactSummary=True),
     user("11:20", "<pasted_content id=\"a1\">meeting notes</pasted_content id=\"a1\"> use these"),
     user("11:22", "<command-name>/nah-harden</command-name><command-args>graph</command-args>"),
+    {**user("11:22", "<command-name>/nah-harden</command-name><command-args>graph</command-args>"),
+     "timestamp": "2026-11-22T11:22:02Z"},
     said("11:23", "Noted the meeting."),
 ]
 AGENT_ENTRIES = [
@@ -178,8 +188,20 @@ def test_session_log_records_agent_git_actions_but_not_agent_briefs(output: str)
     assert "Brief text" not in output
 
 
+def test_session_log_reads_prompts_typed_while_busy(output: str) -> None:
+    assert "LEO: after that, run it while I sleep" in output
+
+
+def test_session_log_reads_notifications_from_queued_commands(output: str) -> None:
+    assert 'background: completed - Background command "Run the pipeline suite" completed (exit code 0)' in output
+
+
+def test_session_log_drops_a_prompt_repeated_within_a_minute(output: str) -> None:
+    assert output.count("LEO: /nah-harden graph") == 1
+
+
 def test_session_log_counts_each_kind(output: str) -> None:
-    assert "prompts: 3, compactions: 1, git actions: 3, test summaries: 1" in output
+    assert "prompts: 4, compactions: 1, git actions: 3, test summaries: 1" in output
 
 
 def test_session_log_fails_loudly_on_an_unknown_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

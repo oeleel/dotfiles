@@ -31,6 +31,8 @@ PASTE_PREVIEW_CHARS = 150
 SNIPPET_CHARS = 160
 MAX_COMMIT_LINES = 3
 IDLE_GAP = timedelta(minutes=60)  # a gap this long usually means Leo stepped away
+REPEAT_WINDOW = timedelta(seconds=60)  # the same prompt twice this close is one ask logged twice
+DELIVERED_KINDS = frozenset({"background", "agent report"})
 SKIP_PREFIXES = (
     "<local-command",
     "<bash-",
@@ -211,6 +213,15 @@ def transcript_events(transcript: Path, is_main: bool) -> list[Event]:
             continue
         stamp = entry.get("timestamp") or ""
         kind = entry.get("type")
+        if kind == "attachment" and is_main:
+            # A queued command holds a notification, or a prompt Leo typed while the agent
+            # worked; the typed prompt is stored only here, never as a user entry.
+            attachment = entry.get("attachment") if isinstance(entry.get("attachment"), dict) else {}
+            queued = block_text(attachment.get("prompt")) if attachment.get("type") == "queued_command" else ""
+            event = typed_prompt_event(stamp, {}, queued) if queued.strip() else None
+            if event:
+                events.append(event)
+            continue
         if kind == "queue-operation" and is_main and entry.get("operation") == "enqueue":
             delivered = delivered_event(stamp, (entry.get("content") or "").strip())
             if delivered:
@@ -253,8 +264,28 @@ def session_events(transcript: Path) -> list[Event]:
     events = transcript_events(transcript, is_main=True)
     for agent_transcript in sorted(transcript.with_suffix("").glob("subagents/*.jsonl")):
         events += [(s, f"agent {kind}", text) for s, kind, text in transcript_events(agent_transcript, False)]
-    unique = list(dict.fromkeys(events))  # a notification can arrive both queued and delivered
-    return sorted(unique, key=lambda event: event[0])
+    return drop_repeats(sorted(events, key=lambda event: event[0]))
+
+
+def drop_repeats(events: list[Event]) -> list[Event]:
+    """A notification can reach the transcript two or three ways (queued, attached, delivered),
+    and a prompt can be logged twice; keep the first of each."""
+    seen: set[tuple[str, str]] = set()
+    last_prompt: Event | None = None
+    kept = []
+    for event in events:
+        stamp, kind, text = event
+        if kind in DELIVERED_KINDS or kind.startswith("message from"):
+            if (kind, text) in seen:
+                continue
+            seen.add((kind, text))
+        if kind == "prompt":
+            repeated = last_prompt and last_prompt[2] == text and stamp and last_prompt[0]
+            if repeated and parse_time(stamp) - parse_time(last_prompt[0]) <= REPEAT_WINDOW:
+                continue
+            last_prompt = event
+        kept.append(event)
+    return kept
 
 
 def render(transcript: Path, events: list[Event]) -> str:
