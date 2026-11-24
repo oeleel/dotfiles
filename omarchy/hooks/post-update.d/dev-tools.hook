@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Omarchy post-update hook: omarchy-update runs it after the system, AUR and mise updates.
+# It updates the user-level tools those steps do not cover. Native Claude Code updates itself
+# and Herdr updates through `hc update`, so neither is here. Each step reports its own failure,
+# and the other steps still run.
+
+readonly NPM_DEFAULTS="$HOME/.default-npm-packages"
+readonly SKILL_SOURCES=("$HOME/dotfiles" "$HOME/N2O/n2o-kit" "$HOME/repos/taste-skill")
+readonly KIT_SKILLS="$HOME/N2O/n2o-kit/skills"
+
+failures=0
+
+step() {
+  local name=$1
+  shift
+  echo -e "\e[32m\nUpdate $name\e[0m"
+  if ! "$@"; then
+    echo -e "\e[31mdev-tools: $name failed\e[0m" >&2
+    failures=$((failures + 1))
+  fi
+}
+
+# mise installs these into each new Node (its default packages file) but never upgrades them.
+# Lines that are paths (nah, nak) link local clones, which their own builds keep current.
+npm_globals() {
+  if [[ ! -f $NPM_DEFAULTS ]]; then
+    echo "dev-tools: $NPM_DEFAULTS is missing" >&2
+    return 1
+  fi
+  local pkgs
+  mapfile -t pkgs < <(grep -vE '^[[:space:]]*($|#|/)' "$NPM_DEFAULTS" | sed 's/$/@latest/')
+  mise exec node@latest -- npm install -g --no-fund --no-audit "${pkgs[@]}"
+}
+
+# Skills load from these clones. Pull only a clean main, so local work is never touched.
+pull_skill_sources() {
+  local repo branch
+  for repo in "${SKILL_SOURCES[@]}"; do
+    branch="$(git -C "$repo" branch --show-current)"
+    if [[ $branch != main ]]; then
+      echo "skip $repo: on $branch"
+      continue
+    fi
+    if [[ -n $(git -C "$repo" status --porcelain) ]]; then
+      echo "skip $repo: uncommitted changes"
+      continue
+    fi
+    git -C "$repo" pull --ff-only --quiet || return 1
+    echo "$repo: $(git -C "$repo" log -1 --format='%h %s' | cut -c1-70)"
+  done
+}
+
+# A skill new in the kit gets a link, as claude/SETUP.md describes. A real folder of the same
+# name is left alone: `ln -sfn` would put the link inside it.
+link_kit_skills() {
+  local dir name target
+  for dir in "$KIT_SKILLS"/*/; do
+    name="$(basename "$dir")"
+    target="$HOME/.claude/skills/$name"
+    if [[ -e $target && ! -L $target ]]; then
+      echo "skip $name: $target is a real folder"
+      continue
+    fi
+    ln -sfn "${dir%/}" "$target"
+  done
+}
+
+step "npm global CLIs" npm_globals
+step "treg" treg update
+step "claude-swap" uv tool upgrade claude-swap
+step "skill sources" pull_skill_sources
+step "kit skill links" link_kit_skills
+
+(( failures == 0 ))

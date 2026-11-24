@@ -36,3 +36,8 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4.5, bezier = "easeO
 -- Terminals sit further back than everything else.
 o.window({ class = "^(Alacritty|dropdown-terminal)$" }, { opacity = "0.84 0.78" })
 o.window({ tag = "default-opacity" }, { opacity = "0.92 0.88" })
+
+-- Opt another application in to Omarchy's standard transparency.
+-- Find its class with: hyprctl clients
+-- o.transparent_window("my-app")
+-- o.transparent_window("my-app", "0.9 0.85") -- Custom active/inactive opacity.

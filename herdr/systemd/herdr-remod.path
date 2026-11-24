@@ -1,0 +1,17 @@
+# Linux counterpart of dev.leolee.herdr-remod.plist: rebuild the patched agents panel when
+# Herdr rewrites its shipped files (it does so when it starts after an update).
+# Install: see herdr-remod.service.
+[Unit]
+Description=Watch the shipped Herdr agents mod and main layout
+
+[Path]
+PathChanged=%h/.config/herdr-app/installed.json
+PathChanged=%h/.config/herdr-app/mods/agents
+PathChanged=%h/.config/herdr-app/mods/agents/main.js
+PathChanged=%h/.config/herdr-app/layouts/main.json
+PathChanged=%h/dotfiles/herdr/agents-menu.patch
+PathChanged=%h/dotfiles/herdr/agents-menu/sessions.js
+Unit=herdr-remod.service
+
+[Install]
+WantedBy=default.target

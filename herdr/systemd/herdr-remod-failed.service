@@ -1,0 +1,8 @@
+# herdr-remod posts its failure notice with osascript, which does not exist on Linux.
+# This unit posts the same notice with the script's last log line.
+[Unit]
+Description=Notify that the Herdr panel rebuild failed
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'notify-send -u critical "Herdr panel rebuild failed" "$(journalctl --user -u herdr-remod.service -n 1 -o cat)"'

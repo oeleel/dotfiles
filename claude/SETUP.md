@@ -36,6 +36,26 @@ gh repo clone oeleel/epiForecasting-private <dir next to your epiForecasting clo
 
 Remote is HTTPS through `gh` auth; SSH keys are not required.
 
+n2o-kit: run only steps 1 and 2 of `~/N2O/n2o-kit/install.sh`. Step 3 appends the kit's rules
+line to the global `CLAUDE.md`, which is this repo's file; the rules load from `~/N2O/CLAUDE.md`
+instead (`docs/macbook-dev-inventory.md` section 4). To pick up new kit skills after a pull:
+
+```bash
+for d in ~/N2O/n2o-kit/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
+```
+
+Herdr agents panel rebuild: on macOS install `herdr/dev.leolee.herdr-remod.plist`; on Linux
+install the systemd user units in `herdr/systemd/` (commands in `herdr-remod.service`).
+
+Updates on the Arch desktop: `omarchy-update` updates the system, AUR and mise tools, then runs
+`omarchy/hooks/post-update.d/dev-tools.hook` for npm global CLIs, treg, claude-swap and a clean
+`main` of each skill clone. Native Claude Code updates itself. Two machine-local files go with it:
+
+- `~/.default-npm-packages`, one per line: `pnpm`, `vercel`, `neonctl`, `heroku`, `pm2`, and the
+  absolute paths of `~/N2O/nah` and `~/N2O/nak`. mise installs them into each new Node.
+- `~/.config/mise/config.toml`: `disable_tools = ["claude"]` under `[settings]`, so Omarchy's mise
+  entry does not replace the native Claude Code, and `supabase = "latest"` under `[tools]`.
+
 ## Device handoff
 
 Leaving a repo for another device: run `/handoff` in it (commits, writes one line to

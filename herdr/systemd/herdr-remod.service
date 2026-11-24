@@ -1,0 +1,17 @@
+# Linux counterpart of dev.leolee.herdr-remod.plist. Enabling it runs herdr-remod at login
+# (launchd RunAtLoad); herdr-remod.path runs it when Herdr rewrites its shipped files.
+# Install:
+#   ln -sfn ~/dotfiles/herdr/systemd/herdr-remod.{path,service} ~/dotfiles/herdr/systemd/herdr-remod-failed.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now herdr-remod.path herdr-remod.service
+# Log: journalctl --user -u herdr-remod
+[Unit]
+Description=Rebuild the patched Herdr agents panel from the shipped one
+OnFailure=herdr-remod-failed.service
+
+[Service]
+Type=oneshot
+Environment=HERDR_REMOD_SETTLE_SECONDS=3
+ExecStart=%h/dotfiles/herdr/herdr-remod
+
+[Install]
+WantedBy=default.target
