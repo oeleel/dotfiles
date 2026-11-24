@@ -1,15 +1,14 @@
 {
+  "env": {
+    "CLAUDE_CODE_DISABLE_FAST_MODE": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(gh pr merge:*)"
     ],
     "defaultMode": "auto"
   },
-  "model": "fable",
-  "env": {
-    "CLAUDE_CODE_DISABLE_FAST_MODE": "1"
-  },
-  "switchModelsOnFlag": false,
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
       {
@@ -75,10 +74,22 @@
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
   },
+  "enabledPlugins": {
+    "cowork-plugin-management@synced": false
+  },
+  "modelSettings": {
+    "claude-fable-5-2": {
+      "effortLevel": "medium"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
+    }
+  },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
+  "switchModelsOnFlag": false,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "autoMode": {
